@@ -252,11 +252,44 @@ describe('the search HTTP surface', () => {
     assert.ok(facets.routes.length > 0);
   });
 
-  test('the dashboard ships the filter controls', async () => {
+  test('filters live behind a button that opens a dialog', async () => {
     const html = await (await fetch(base)).text();
-    assert.match(html, /role="search"/);
-    assert.match(html, /type="search"/);
-    assert.match(html, /Clear filters/);
+
+    assert.match(html, /id="open-filters"[^>]*aria-haspopup="dialog"/);
+    assert.match(html, /<dialog id="filter-dialog"/);
+    assert.match(html, /Advanced filters/);
+    // Native <dialog> via showModal gives focus trapping, Escape to close and a
+    // backdrop from the platform, rather than hand-rolled focus management.
+    assert.match(html, /showModal\(\)/);
+  });
+
+  test('the dialog exposes every filter dimension the API supports', async () => {
+    const html = await (await fetch(base)).text();
+
+    assert.match(html, /type="search"/, 'free text');
+    assert.match(html, /id="min-cost"/, 'cost floor');
+    assert.match(html, /id="max-cost"/, 'cost ceiling');
+    assert.match(html, /name="scope"[^>]*value="all"/, 'search all history');
+    assert.match(html, /id="facets"/, 'route, platform, tier, person, channel');
+  });
+
+  test('edits are staged and only take effect on Apply', async () => {
+    const html = await (await fetch(base)).text();
+
+    // Two copies of the state: the stream must not rearrange under you while you
+    // are still deciding what you want to see.
+    assert.match(html, /let applied = emptyFilters\(\)/);
+    assert.match(html, /let draft = cloneFilters\(applied\)/);
+    assert.match(html, /applied = cloneFilters\(draft\)/, 'Apply promotes the draft');
+    assert.match(html, /id="apply-filters"/);
+    assert.match(html, /id="reset-filters"/);
+  });
+
+  test('active filters stay visible outside the dialog', async () => {
+    const html = await (await fetch(base)).text();
+    assert.match(html, /id="active-chips"/, 'removable chips');
+    assert.match(html, /id="filter-count"/, 'count badge on the button');
+    assert.match(html, /Clear all/);
     // Filtering must be described as narrowing the view, never as changing a
     // decision, because it does not.
     assert.match(html, /does not change any decision/);

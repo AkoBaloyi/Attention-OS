@@ -141,30 +141,88 @@
   .voice-answer { font-size: 16px; line-height: 1.55; margin: 0 0 14px; }
   .prompt-btn { font-size: 12.5px; }
 
-  /* ---- Filters ---- */
-  .filters { padding: 14px 16px; margin-bottom: 12px; }
-  .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-  input[type='search'] {
-    flex: 1; font: inherit; color: var(--text); background: var(--bg);
+  /* ---- Filter bar ---- */
+  .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; margin-left: 7px; min-width: 18px; padding: 1px 6px;
+    border-radius: 999px; background: var(--discord); color: var(--bg);
+    font-size: 11px; font-weight: 700; text-align: center;
+  }
+  .active-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .active-chip {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+    padding: 4px 6px 4px 10px; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+  }
+  .active-chip span.k { color: var(--muted); }
+  .active-chip button {
+    border: 0; background: transparent; color: var(--muted); padding: 0 3px;
+    font-size: 14px; line-height: 1; cursor: pointer; border-radius: 4px;
+  }
+  .active-chip button:hover { color: var(--push); }
+  .filter-note { font-size: 12px; color: var(--muted); margin: 0; flex: 1 1 220px; }
+
+  /* ---- Filter dialog ---- */
+  dialog {
+    border: 1px solid var(--line); border-radius: 14px; padding: 0;
+    background: var(--panel); color: var(--text);
+    width: min(640px, calc(100vw - 32px)); max-height: min(82vh, 780px);
+  }
+  dialog::backdrop { background: rgba(6, 8, 11, .62); backdrop-filter: blur(2px); }
+  [data-theme='light'] dialog::backdrop { background: rgba(16, 21, 29, .34); }
+  #filter-form { display: flex; flex-direction: column; max-height: inherit; }
+  .dialog-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--line);
+  }
+  .dialog-head h2 { margin: 0; font-size: 15px; letter-spacing: .04em; }
+  #close-filters { border: 0; background: transparent; font-size: 22px; line-height: 1; padding: 0 4px; color: var(--muted); }
+  .dialog-body { padding: 18px 20px; overflow-y: auto; display: grid; gap: 20px; }
+  .dialog-foot {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel-2);
+  }
+  .dialog-foot .btn-row { margin-left: auto; }
+  .preview { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+  .field { border: 0; padding: 0; margin: 0; display: grid; gap: 7px; }
+  .field > label, .field > legend {
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; padding: 0;
+  }
+  .field-hint { font-size: 11.5px; color: var(--muted); margin: 0; }
+  .field-hint code {
+    font-family: ui-monospace, monospace; background: var(--panel-2);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  input[type='search'], input[type='number'] {
+    font: inherit; color: var(--text); background: var(--bg);
     border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px;
   }
-  input[type='search']::placeholder { color: var(--muted); }
-  input[type='search']:focus-visible { outline: 2px solid var(--discord); outline-offset: 1px; }
-  .facets { display: flex; gap: 16px; flex-wrap: wrap; }
-  .facet { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  input[type='search'] { width: 100%; }
+  input[type='number'] { width: 100px; }
+  input::placeholder { color: var(--muted); }
+  input:focus-visible { outline: 2px solid var(--discord); outline-offset: 1px; }
+  .range { display: flex; gap: 8px; align-items: center; }
+  .range label { font-size: 12px; color: var(--muted); }
+  .radio-row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .radio-row label { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+  .facet { display: grid; gap: 7px; margin-bottom: 16px; }
+  .facet:last-child { margin-bottom: 0; }
   .facet > span.facet-name {
-    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
-    color: var(--muted); font-weight: 700; margin-right: 2px;
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
   }
+  .facet-values { display: flex; gap: 6px; flex-wrap: wrap; }
   .toggle {
-    font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; padding: 5px 11px; border-radius: 999px;
     background: transparent; border: 1px solid var(--line); color: var(--muted);
   }
   .toggle[aria-pressed='true'] {
-    background: var(--panel-2); color: var(--text); border-color: var(--muted); font-weight: 600;
+    background: var(--panel-2); color: var(--text); border-color: var(--discord); font-weight: 600;
   }
-  .toggle b { font-weight: 400; opacity: .65; margin-left: 3px; }
-  .filter-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+  .toggle b { font-weight: 400; opacity: .6; margin-left: 4px; }
   mark { background: var(--digest-bg); color: var(--digest-fg); border-radius: 3px; padding: 0 2px; }
 
   /* Keep setup controls compact so the decision evidence stays above the fold. */
@@ -378,20 +436,71 @@
       Decisions. Open one to see perception, cost, budget and route.
     </p>
 
-    <div class="panel filters" role="search" aria-label="Filter decisions">
-      <div class="filter-row">
-        <label class="visually-hidden" for="search">Search decisions</label>
-        <input
-          id="search"
-          type="search"
-          placeholder="Search text, topic, reason, basis, person or channel"
-          autocomplete="off"
-        />
-        <button id="clear-filters" hidden>Clear filters</button>
-      </div>
-      <div class="facets" id="facets"></div>
+    <div class="filter-bar">
+      <button id="open-filters" aria-haspopup="dialog">
+        Filters<span class="badge" id="filter-count" hidden>0</span>
+      </button>
+      <div class="active-chips" id="active-chips" aria-label="Active filters"></div>
+      <button id="clear-filters" hidden>Clear all</button>
       <p class="filter-note" id="filter-note" role="status" aria-live="polite"></p>
     </div>
+
+    <!-- Native dialog, so focus trapping, Escape to close and the backdrop all
+         come from the platform rather than from hand-rolled focus management. -->
+    <dialog id="filter-dialog" aria-labelledby="filter-dialog-title">
+      <form method="dialog" id="filter-form">
+        <div class="dialog-head">
+          <h2 id="filter-dialog-title">Advanced filters</h2>
+          <button type="button" id="close-filters" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="dialog-body">
+          <div class="field">
+            <label for="search">Search</label>
+            <input
+              id="search"
+              type="search"
+              placeholder="Message text, topic, reason, basis, person or channel"
+              autocomplete="off"
+            />
+            <p class="field-hint">
+              Searching <code>budget_exhausted</code> finds everything the budget displaced.
+            </p>
+          </div>
+
+          <div id="facets"></div>
+
+          <fieldset class="field">
+            <legend>Cost range</legend>
+            <div class="range">
+              <label for="min-cost">From</label>
+              <input id="min-cost" type="number" min="0" step="0.01" placeholder="any" />
+              <label for="max-cost">to</label>
+              <input id="max-cost" type="number" min="0" step="0.01" placeholder="any" />
+            </div>
+            <p class="field-hint">
+              At or above 4 is non discretionary, so it overrode the budget. Below 1 was held.
+            </p>
+          </fieldset>
+
+          <fieldset class="field">
+            <legend>Scope</legend>
+            <div class="radio-row">
+              <label><input type="radio" name="scope" value="window" checked /> This budget window</label>
+              <label><input type="radio" name="scope" value="all" /> All history</label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="dialog-foot">
+          <p class="preview" id="filter-preview" role="status" aria-live="polite"></p>
+          <div class="btn-row">
+            <button type="button" id="reset-filters">Reset</button>
+            <button type="button" id="apply-filters" class="primary">Apply</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
 
     <div class="stream" id="stream">
       <p class="empty">No messages yet. Run a scenario, or post in a connected channel.</p>
@@ -750,23 +859,115 @@ const FACET_GROUPS = [
   { key: 'channel', name: 'channel', from: 'channels' },
 ];
 
-const active = new Map(FACET_GROUPS.map((g) => [g.key, new Set()]));
-let searchTerm = '';
-
-function filtersActive() {
-  return searchTerm.trim().length > 0 || [...active.values()].some((set) => set.size > 0);
+/**
+ * Two copies of the filter state.
+ *
+ * `applied` is what the stream is currently showing. `draft` is what the dialog
+ * is editing. Nothing takes effect until Apply, so you can configure a view
+ * without the list rearranging under you while you are still deciding. Cancelling
+ * or pressing Escape discards the draft.
+ */
+function emptyFilters() {
+  return {
+    groups: new Map(FACET_GROUPS.map((g) => [g.key, new Set()])),
+    search: '',
+    minCost: '',
+    maxCost: '',
+    scope: 'window',
+  };
 }
 
-function buildQuery() {
+function cloneFilters(source) {
+  return {
+    groups: new Map([...source.groups].map(([key, set]) => [key, new Set(set)])),
+    search: source.search,
+    minCost: source.minCost,
+    maxCost: source.maxCost,
+    scope: source.scope,
+  };
+}
+
+let applied = emptyFilters();
+let draft = cloneFilters(applied);
+
+function countFilters(filters) {
+  let n = 0;
+  for (const set of filters.groups.values()) n += set.size;
+  if (filters.search.trim()) n++;
+  if (filters.minCost !== '') n++;
+  if (filters.maxCost !== '') n++;
+  if (filters.scope === 'all') n++;
+  return n;
+}
+
+function filtersActive() {
+  return countFilters(applied) > 0;
+}
+
+function buildQuery(filters = applied) {
   const params = new URLSearchParams();
-  for (const [key, values] of active) {
+  for (const [key, values] of filters.groups) {
     for (const value of values) params.append(key, value);
   }
-  if (searchTerm.trim()) params.set('q', searchTerm.trim());
+  if (filters.search.trim()) params.set('q', filters.search.trim());
+  if (filters.minCost !== '') params.set('minCost', filters.minCost);
+  if (filters.maxCost !== '') params.set('maxCost', filters.maxCost);
+  if (filters.scope === 'all') params.set('window', 'all');
   params.set('limit', '200');
   return params.toString();
 }
 
+/** Chips outside the dialog, so active filters are never invisible. */
+function renderActiveChips() {
+  const host = $('active-chips');
+  host.innerHTML = '';
+
+  const chips = [];
+  for (const group of FACET_GROUPS) {
+    for (const value of applied.groups.get(group.key)) {
+      chips.push({
+        key: group.name,
+        label: group.key === 'person' ? shortPerson(value) : value,
+        remove: () => applied.groups.get(group.key).delete(value),
+      });
+    }
+  }
+  if (applied.search.trim()) {
+    chips.push({ key: 'search', label: applied.search.trim(), remove: () => { applied.search = ''; } });
+  }
+  if (applied.minCost !== '') {
+    chips.push({ key: 'cost from', label: applied.minCost, remove: () => { applied.minCost = ''; } });
+  }
+  if (applied.maxCost !== '') {
+    chips.push({ key: 'cost to', label: applied.maxCost, remove: () => { applied.maxCost = ''; } });
+  }
+  if (applied.scope === 'all') {
+    chips.push({ key: 'scope', label: 'all history', remove: () => { applied.scope = 'window'; } });
+  }
+
+  for (const chip of chips) {
+    const el = document.createElement('span');
+    el.className = 'active-chip';
+    el.innerHTML = `<span class="k">${escape(chip.key)}</span> ${escape(chip.label)}`;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `Remove ${chip.key} filter ${chip.label}`);
+    remove.textContent = '\u00d7';
+    remove.addEventListener('click', async () => {
+      chip.remove();
+      draft = cloneFilters(applied);
+      await applyFilters();
+    });
+    el.append(remove);
+    host.append(el);
+  }
+
+  const count = countFilters(applied);
+  $('filter-count').hidden = count === 0;
+  $('filter-count').textContent = String(count);
+}
+
+/** Renders the facet toggles inside the dialog, bound to the draft. */
 async function renderFacets() {
   const facets = await (await fetch('/api/facets')).json();
   const host = $('facets');
@@ -783,28 +984,114 @@ async function renderFacets() {
     name.textContent = group.name;
     wrapper.append(name);
 
+    const row = document.createElement('div');
+    row.className = 'facet-values';
+
     for (const { value, count } of values) {
-      const selected = active.get(group.key).has(value);
       const button = document.createElement('button');
       button.className = 'toggle';
       button.type = 'button';
-      button.setAttribute('aria-pressed', String(selected));
+      button.setAttribute('aria-pressed', String(draft.groups.get(group.key).has(value)));
       const label = group.key === 'person' ? shortPerson(value) : value;
       button.innerHTML = `${escape(label)}<b>${count}</b>`;
       button.addEventListener('click', async () => {
-        const set = active.get(group.key);
+        const set = draft.groups.get(group.key);
         set.has(value) ? set.delete(value) : set.add(value);
-        await applyFilters();
+        button.setAttribute('aria-pressed', String(set.has(value)));
+        await previewDraft();
       });
-      wrapper.append(button);
+      row.append(button);
     }
+    wrapper.append(row);
     host.append(wrapper);
   }
 }
 
+/**
+ * Live count of what Apply would show.
+ *
+ * Worth the extra request: it means you find out a combination matches nothing
+ * while the dialog is still open, rather than after closing it onto an empty list.
+ */
+let previewTimer;
+async function previewDraft() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    const results = await (await fetch(`/api/decisions?${buildQuery(draft)}`)).json();
+    const n = countFilters(draft);
+    $('filter-preview').textContent =
+      n === 0
+        ? 'No filters set. Apply will show everything in this window.'
+        : `${results.length} ${results.length === 1 ? 'decision' : 'decisions'} match ${n} ${n === 1 ? 'filter' : 'filters'}.`;
+    $('apply-filters').textContent = results.length === 0 && n > 0 ? 'Apply (empty)' : 'Apply';
+  }, 140);
+}
+
+function readDraftInputs() {
+  draft.search = $('search').value;
+  draft.minCost = $('min-cost').value;
+  draft.maxCost = $('max-cost').value;
+  draft.scope = document.querySelector('input[name="scope"]:checked')?.value ?? 'window';
+}
+
+function writeDraftInputs() {
+  $('search').value = draft.search;
+  $('min-cost').value = draft.minCost;
+  $('max-cost').value = draft.maxCost;
+  for (const radio of document.querySelectorAll('input[name="scope"]')) {
+    radio.checked = radio.value === draft.scope;
+  }
+}
+
+async function openFilters() {
+  // Start from what is currently applied, so the dialog reflects reality.
+  draft = cloneFilters(applied);
+  writeDraftInputs();
+  await renderFacets();
+  await previewDraft();
+  $('filter-dialog').showModal();
+  $('search').focus();
+}
+
+$('open-filters').addEventListener('click', () => void openFilters());
+$('close-filters').addEventListener('click', () => $('filter-dialog').close());
+
+for (const id of ['search', 'min-cost', 'max-cost']) {
+  $(id).addEventListener('input', () => {
+    readDraftInputs();
+    void previewDraft();
+  });
+}
+for (const radio of document.querySelectorAll('input[name="scope"]')) {
+  radio.addEventListener('change', () => {
+    readDraftInputs();
+    void previewDraft();
+  });
+}
+
+// Enter in a text field should apply rather than silently close the dialog.
+$('filter-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  $('apply-filters').click();
+});
+
+$('apply-filters').addEventListener('click', async () => {
+  readDraftInputs();
+  applied = cloneFilters(draft);
+  $('filter-dialog').close();
+  await applyFilters();
+});
+
+$('reset-filters').addEventListener('click', async () => {
+  draft = emptyFilters();
+  writeDraftInputs();
+  await renderFacets();
+  await previewDraft();
+});
+
 /** Highlights the matched term so it is obvious why a row came back. */
 function highlight(text) {
-  const term = searchTerm.trim();
+  const term = applied.search.trim();
   if (!term) return escape(text);
   const pattern = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
   return escape(text).replace(pattern, '<mark>$1</mark>');
@@ -843,21 +1130,12 @@ async function applyFilters() {
     ? `Showing ${entries.length} of ${$('c-received').textContent} in this window. Filtering narrows the view only, it does not change any decision.`
     : '';
 
-  await renderFacets();
+  renderActiveChips();
 }
 
-let searchTimer;
-$('search').addEventListener('input', (event) => {
-  searchTerm = event.target.value;
-  // Debounced so typing does not fire a query per keystroke.
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => void applyFilters(), 180);
-});
-
 $('clear-filters').addEventListener('click', async () => {
-  searchTerm = '';
-  $('search').value = '';
-  for (const set of active.values()) set.clear();
+  applied = emptyFilters();
+  draft = cloneFilters(applied);
   await applyFilters();
 });
 
@@ -866,7 +1144,13 @@ $('clear-filters').addEventListener('click', async () => {
 async function refresh() {
   await loadEntries();
   renderState(await (await fetch('/api/state')).json());
-  await renderFacets();
+  renderActiveChips();
+  // Facets are only rendered inside the dialog, so refresh them there when open
+  // rather than on every incoming decision.
+  if ($('filter-dialog').open) {
+    await renderFacets();
+    await previewDraft();
+  }
 }
 
 async function loadScenarios() {

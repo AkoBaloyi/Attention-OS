@@ -36,6 +36,9 @@ export type Secrets = {
   discordBotToken?: string;
   slackBotToken?: string;
   slackAppToken?: string;
+  /** Optional. Without it the dashboard speaks through the browser instead. */
+  elevenLabsApiKey?: string;
+  elevenLabsVoiceId?: string;
   ledgerPath: string;
   port: number;
   callEnabled: boolean;
@@ -73,6 +76,8 @@ export function loadSecrets(env = process.env): Secrets {
     discordBotToken: nonEmpty(env.DISCORD_BOT_TOKEN),
     slackBotToken: nonEmpty(env.SLACK_BOT_TOKEN),
     slackAppToken: nonEmpty(env.SLACK_APP_TOKEN),
+    elevenLabsApiKey: nonEmpty(env.ELEVENLABS_API_KEY),
+    elevenLabsVoiceId: nonEmpty(env.ELEVENLABS_VOICE_ID),
     ledgerPath: nonEmpty(env.LEDGER_PATH) ?? './data/ledger.sqlite',
     port: Number(env.PORT ?? 4317),
     callEnabled: env.CALL_ENABLED === 'true',

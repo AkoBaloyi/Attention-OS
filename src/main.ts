@@ -19,6 +19,7 @@ import { createPipeline } from './runtime/pipeline.ts';
 import { createApp } from './server/app.ts';
 import { createInjector } from './scenarios/injector.ts';
 import { createReplayer } from './scenarios/replay.ts';
+import { elevenLabsSynthesiser } from './voice/speak.ts';
 import type { Scenario } from './scenarios/reference.ts';
 
 const config = await loadConfig();
@@ -180,6 +181,19 @@ const replayScenario = replayer
 
 // --- Server ---------------------------------------------------------------
 
+// --- Voice ----------------------------------------------------------------
+
+// Optional. The dashboard uses the browser's own speech synthesis when this is
+// absent, so the voice interface works with no key at all.
+const synthesiser = secrets.elevenLabsApiKey
+  ? elevenLabsSynthesiser({
+      apiKey: secrets.elevenLabsApiKey,
+      voiceId: secrets.elevenLabsVoiceId,
+    })
+  : undefined;
+
+// --- Server ---------------------------------------------------------------
+
 const app = createApp({
   ledger,
   pipeline,
@@ -187,6 +201,7 @@ const app = createApp({
   window: attentionWindow,
   runScenario,
   replayScenario,
+  synthesiser,
   adapters: () => ({ ...live, perception: perceptionMode }),
 });
 
@@ -205,6 +220,7 @@ log(
         : 'unavailable'
   }`,
 );
+log(`  voice: ${synthesiser ? 'elevenlabs' : 'browser speech synthesis (no ELEVENLABS_API_KEY)'}`);
 log(`  ledger: ${secrets.ledgerPath}`);
 log('');
 

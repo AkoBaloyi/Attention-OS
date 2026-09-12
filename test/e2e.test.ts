@@ -215,7 +215,7 @@ describe('the HTTP surface the dashboard depends on', () => {
     const res = await fetch(base);
     assert.equal(res.status, 200);
     const html = await res.text();
-    assert.match(html, /Attention budget/);
+    assert.match(html, /Attention remaining/);
     // The pipeline sequence has to be legible on screen, not just in the code.
     for (const stage of ['Perception', 'Cost', 'Budget', 'Route']) {
       assert.match(html, new RegExp(`<h4>${stage}</h4>`));
@@ -242,7 +242,7 @@ describe('the HTTP surface the dashboard depends on', () => {
   test('the notification summary groups by outcome', async () => {
     const html = await (await fetch(base)).text();
     assert.match(html, /Notification summary/);
-    for (const group of ['Interrupted you', 'Waiting in the digest', 'Held silently']) {
+    for (const group of ['Interrupted you', 'Digest queue', 'Held silently']) {
       assert.match(html, new RegExp(group));
     }
   });

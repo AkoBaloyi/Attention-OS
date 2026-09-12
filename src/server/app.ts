@@ -17,6 +17,8 @@ import { ceilingFor, computeNextDigestAt, systemClock, type Clock } from '../con
 import type { Ledger } from '../store/ledger.ts';
 import type { Pipeline } from '../runtime/pipeline.ts';
 import { SCENARIOS, findScenario, type Scenario } from '../scenarios/reference.ts';
+import { answer } from '../voice/ask.ts';
+import type { Synthesiser } from '../voice/speak.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -54,6 +56,8 @@ export type ServerDeps = {
    * gets recorded against.
    */
   replayScenario?: (scenario: Scenario) => Promise<void>;
+  /** Server-side voice. Absent means the browser speaks, which needs no key. */
+  synthesiser?: Synthesiser;
   /** Which adapters actually connected. Shown on the dashboard so the demo can
    * never imply a platform is live when it is not. */
   adapters: () => { discord: boolean; slack: boolean; perception: 'live' | 'stub' };
@@ -81,6 +85,7 @@ export function createApp(deps: ServerDeps) {
       focusActive: deps.focus.isActive(),
       ...deps.ledger.counters(windowKey_, ceiling),
       adapters: deps.adapters(),
+      voice: deps.synthesiser ? 'server' : 'browser',
       // How scenarios reach the pipeline. 'inject' posts over the real platform
       // APIs; 'replay' bypasses the adapters and is development only. The
       // dashboard labels the buttons differently for each.
@@ -144,6 +149,58 @@ export function createApp(deps: ServerDeps) {
       res.write(': connected\n\n');
       sseClients.add(res);
       req.on('close', () => sseClients.delete(res));
+      return;
+    }
+
+    if (path === '/api/voice/ask' && req.method === 'POST') {
+      const body = (await readJson(req)) as { transcript?: unknown };
+      const transcript = typeof body.transcript === 'string' ? body.transcript : '';
+
+      const key = windowKey();
+      const ceiling = ceilingFor(deps.focus.isActive());
+
+      // The ledger is handed over as a read-only view. There is no path from a
+      // spoken question to a routing decision, and there must never be one.
+      json(res, 200, {
+        ...answer({
+          transcript,
+          ledger: deps.ledger,
+          windowKey: key,
+          counters: deps.ledger.counters(key, ceiling),
+          focusActive: deps.focus.isActive(),
+        }),
+        voice: deps.synthesiser ? 'server' : 'browser',
+      });
+      return;
+    }
+
+    if (path === '/api/voice/speak' && req.method === 'POST') {
+      if (!deps.synthesiser) {
+        // Not an error. The browser speaks by default and the client falls back
+        // to it without needing to be told twice.
+        json(res, 409, { error: 'no server voice configured, use browser speech synthesis' });
+        return;
+      }
+
+      const body = (await readJson(req)) as { text?: unknown };
+      const text = typeof body.text === 'string' ? body.text.slice(0, 4000) : '';
+      if (text.trim().length === 0) {
+        json(res, 400, { error: 'text is required' });
+        return;
+      }
+
+      try {
+        const audio = await deps.synthesiser.synthesise(text);
+        res.writeHead(200, {
+          'content-type': 'audio/mpeg',
+          'content-length': String(audio.byteLength),
+          'cache-control': 'no-store',
+        });
+        res.end(Buffer.from(audio));
+      } catch (error) {
+        // Degrade rather than go silent: the client retries with the browser voice.
+        json(res, 502, { error: String(error) });
+      }
       return;
     }
 

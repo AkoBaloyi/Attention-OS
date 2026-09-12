@@ -85,6 +85,10 @@
     border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
   }
   .chip[data-live='true'] { color: var(--ok); border-color: var(--ok); }
+  @media (min-width: 700px) {
+    header { flex-wrap: nowrap; padding: 10px 24px; gap: 10px; }
+    .tagline { flex-basis: 220px; min-width: 180px; }
+  }
 
   /* ---- Horizontal control bar (was a left sidebar) ---- */
   .bar {
@@ -96,7 +100,7 @@
   .bar-cell.grow { flex: 1 1 260px; }
 
   .budget-figure { font-size: 34px; font-weight: 650; line-height: 1.05; font-variant-numeric: tabular-nums; margin: 0; }
-  .budget-figure small { font-size: 15px; color: var(--muted); font-weight: 400; }
+  .budget-figure small { display: block; font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 5px; }
   .meter { height: 8px; border-radius: 999px; background: var(--panel-2); overflow: hidden; margin: 8px 0 6px; min-width: 180px; }
   .meter > div { height: 100%; background: linear-gradient(90deg, var(--ok), var(--digest)); transition: width .35s ease; }
   .state-line { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
@@ -119,13 +123,67 @@
   .scenario-btn { text-align: left; }
   .scenario-btn b { display: block; font-size: 13px; }
   .scenario-btn em { font-style: normal; color: var(--muted); font-size: 11px; }
+  button.primary { border-color: var(--discord); color: var(--discord); font-weight: 600; }
+  button.primary[aria-pressed='true'] {
+    background: var(--push-bg); color: var(--push-fg); border-color: var(--push);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: .62; } }
+  @media (prefers-reduced-motion: reduce) {
+    button.primary[aria-pressed='true'] { animation: none; }
+  }
+
+  .voice-status { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .voice-said {
+    font-size: 13px; color: var(--muted); margin: 0 0 8px;
+    padding-left: 12px; border-left: 2px solid var(--line);
+  }
+  .voice-answer { font-size: 16px; line-height: 1.55; margin: 0 0 14px; }
+  .prompt-btn { font-size: 12.5px; }
+
+  /* Keep setup controls compact so the decision evidence stays above the fold. */
+  @media (min-width: 960px) {
+    .bar {
+      display: grid;
+      grid-template-columns: minmax(230px, .8fr) minmax(320px, 1fr) minmax(460px, 1.5fr);
+      padding: 0 24px;
+    }
+    .bar-cell { min-width: 0; padding: 10px 16px; }
+    .bar-cell:first-child { grid-row: span 2; padding-left: 0; }
+    .bar-cell:nth-child(2) { grid-column: 2; grid-row: 1; }
+    .bar-cell:nth-child(3) { grid-column: 2; grid-row: 2; }
+    .bar-cell.grow { grid-column: 3; grid-row: span 2; min-width: 0; }
+    .label { margin-bottom: 7px; }
+    .budget-figure { font-size: 30px; }
+  }
 
   /* ---- Body ---- */
-  main { padding: 20px 24px 40px; display: grid; gap: 18px; max-width: 1180px; }
+  main { width: 100%; padding: 20px 24px 40px; display: grid; gap: 18px; max-width: none; }
   .mode-note { font-size: 12px; margin: 0; padding: 9px 12px; border-radius: 8px; }
   .mode-note[data-mode='inject'] { color: var(--ok); background: var(--ok-bg); }
   .mode-note[data-mode='replay'] { color: var(--digest-fg); background: var(--warn-bg); }
   .mode-note[data-mode='none'] { color: var(--muted); background: var(--panel-2); }
+
+  /* ---- Cross-platform comparison --------------------------------------- */
+  .comparison { padding: 16px 18px; border-color: color-mix(in srgb, var(--discord) 32%, var(--line)); }
+  .comparison[hidden] { display: none; }
+  .comparison-heading { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 12px; }
+  .comparison-heading .label { margin: 0; }
+  .comparison-note { margin: 0; color: var(--muted); font-size: 12px; }
+  .comparison-pair { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); gap: 10px; align-items: stretch; }
+  .comparison-choice { border: 1px solid var(--line); background: var(--panel-2); border-radius: 9px; padding: 12px; }
+  .comparison-choice[data-route='push'], .comparison-choice[data-route='call'] { border-color: color-mix(in srgb, var(--push) 55%, var(--line)); }
+  .comparison-choice[data-route='digest'] { border-color: color-mix(in srgb, var(--digest) 55%, var(--line)); }
+  .comparison-source { display: flex; align-items: center; gap: 7px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+  .source-icon { width: 18px; height: 18px; flex: 0 0 auto; }
+  .comparison-topic { margin: 8px 0 10px; font-size: 14px; font-weight: 650; }
+  .comparison-result { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .comparison-cost { font-size: 25px; font-variant-numeric: tabular-nums; font-weight: 650; }
+  .comparison-arrow { align-self: center; color: var(--muted); text-align: center; font-size: 18px; }
+  @media (max-width: 620px) {
+    .comparison-pair { grid-template-columns: 1fr; }
+    .comparison-arrow { transform: rotate(90deg); }
+  }
 
   /* ---- Notification summary ---- */
   .summary { padding: 18px 20px; }
@@ -212,15 +270,15 @@
 
 <div class="bar">
   <div class="bar-cell">
-    <p class="label">Attention budget</p>
+    <p class="label">Attention remaining</p>
     <p class="budget-figure">
-      <span id="spent">0.00</span><small> / <span id="ceiling">3.0</span></small>
+      <span id="remaining-percent">100%</span><small id="remaining-detail">3.00 points left</small>
     </p>
     <div class="meter" role="img" aria-labelledby="budget-a11y">
       <div id="meter-fill" style="width:0%"></div>
     </div>
     <p class="visually-hidden" id="budget-a11y">
-      Budget: <span id="budget-a11y-text">0 of 3 spent</span>
+      Budget: <span id="budget-a11y-text">100% remaining</span>
     </p>
     <div class="state-line">
       <span class="state-badge" id="focus-state" data-focus="false">OPEN</span>
@@ -233,7 +291,7 @@
     <div class="counters">
       <div class="counter"><b id="c-received">0</b><span>received</span></div>
       <div class="counter"><b id="c-held">0</b><span>held</span></div>
-      <div class="counter"><b id="c-digested">0</b><span>deferred</span></div>
+      <div class="counter"><b id="c-digested">0</b><span>digest queue</span></div>
       <div class="counter"><b id="c-interrupted">0</b><span>interrupts</span></div>
     </div>
   </div>
@@ -241,6 +299,9 @@
   <div class="bar-cell">
     <p class="label">Controls</p>
     <div class="btn-row">
+      <button id="voice-btn" class="primary" aria-pressed="false">
+        <span aria-hidden="true">&#9679;</span> <span id="voice-btn-label">Ask by voice</span>
+      </button>
       <button id="focus-toggle" aria-pressed="false">Enter focus mode</button>
       <button id="reset-window" title="Restores the full ceiling. Demo pacing, not a way past the budget.">
         Roll window
@@ -256,6 +317,23 @@
 
 <main>
   <p class="mode-note" id="scenario-mode" role="status"></p>
+
+  <section class="panel comparison" id="comparison" hidden aria-labelledby="comparison-label">
+    <div class="comparison-heading">
+      <p class="label" id="comparison-label">Cross-platform arbitration</p>
+      <p class="comparison-note" id="comparison-note"></p>
+    </div>
+    <div class="comparison-pair" id="comparison-pair"></div>
+  </section>
+
+  <section class="panel summary" id="voice-panel" hidden aria-labelledby="voice-label">
+    <p class="label" id="voice-label">Voice</p>
+    <p class="voice-status" id="voice-status" role="status" aria-live="polite">Idle.</p>
+    <p class="voice-said" id="voice-said" hidden></p>
+    <p class="voice-answer" id="voice-answer" hidden></p>
+    <div class="btn-row" id="voice-prompts"></div>
+    <p class="claim" id="voice-note" style="margin-top:14px"></p>
+  </section>
 
   <section class="panel summary" aria-labelledby="summary-label">
     <p class="label" id="summary-label">Notification summary</p>
@@ -313,16 +391,71 @@ window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e
 
 /* ---- State -------------------------------------------------------------- */
 
+function platformIcon(platform) {
+  if (platform === 'slack') {
+    return `<svg class="source-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#36c5f0" d="M9.1 2a2.1 2.1 0 0 0-2.1 2.1v5.2a2.1 2.1 0 1 0 4.2 0V4.1A2.1 2.1 0 0 0 9.1 2Z"/>
+      <path fill="#2eb67d" d="M22 9.1A2.1 2.1 0 0 0 19.9 7h-5.2a2.1 2.1 0 1 0 0 4.2h5.2A2.1 2.1 0 0 0 22 9.1Z"/>
+      <path fill="#ecb22e" d="M14.9 22a2.1 2.1 0 0 0 2.1-2.1v-5.2a2.1 2.1 0 1 0-4.2 0v5.2a2.1 2.1 0 0 0 2.1 2.1Z"/>
+      <path fill="#e01e5a" d="M2 14.9A2.1 2.1 0 0 0 4.1 17h5.2a2.1 2.1 0 1 0 0-4.2H4.1A2.1 2.1 0 0 0 2 14.9Z"/>
+    </svg>`;
+  }
+  return `<svg class="source-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#5865f2" d="M20.3 4.7A17 17 0 0 0 16.1 3l-.5 1a15.5 15.5 0 0 0-7.2 0l-.5-1a17 17 0 0 0-4.2 1.7C1 8.8.2 12.8.6 16.8A17 17 0 0 0 5.7 19.4l1.2-1.7-1.9-.9.5-.4c3.7 1.7 9.3 1.7 13 0l.5.4-1.9.9 1.2 1.7a17 17 0 0 0 5.1-2.6c.5-4.7-.8-8.7-3.1-12.1ZM8.7 14.4c-1.1 0-2-1-2-2.2s.9-2.2 2-2.2 2 1 2 2.2-.9 2.2-2 2.2Zm6.6 0c-1.1 0-2-1-2-2.2s.9-2.2 2-2.2 2 1 2 2.2-.9 2.2-2 2.2Z"/>
+  </svg>`;
+}
+
+function latestComparison() {
+  for (let first = 0; first < entries.length; first++) {
+    const a = entries[first];
+    if (!['push', 'call', 'digest'].includes(a.decision.route)) continue;
+    for (let second = first + 1; second < entries.length; second++) {
+      const b = entries[second];
+      if (a.message.platform === b.message.platform) continue;
+      if (!['push', 'call', 'digest'].includes(b.decision.route)) continue;
+      const secondsApart = Math.abs(new Date(a.recordedAt) - new Date(b.recordedAt)) / 1000;
+      if (secondsApart <= 12) return [a, b];
+    }
+  }
+  return null;
+}
+
+function renderComparison(s) {
+  const pair = latestComparison();
+  const section = $('comparison');
+  if (!pair) {
+    section.hidden = true;
+    return;
+  }
+
+  const [a, b] = pair;
+  section.hidden = false;
+  $('comparison-note').textContent = `${s.focusActive ? 'Focus mode on' : 'Open'} · ${Math.round((s.remaining / s.ceiling) * 100)}% attention remaining`;
+  const choice = (entry) => `
+    <article class="comparison-choice" data-route="${entry.decision.route}">
+      <div class="comparison-source">${platformIcon(entry.message.platform)}${escape(entry.message.platform)}</div>
+      <p class="comparison-topic">${escape(entry.decision.envelope.topic)}</p>
+      <div class="comparison-result">
+        <span class="comparison-cost">${fmt(entry.decision.cost)}</span>
+        <span class="route" data-route="${entry.decision.route}">${escape(entry.decision.route)}</span>
+      </div>
+    </article>`;
+  $('comparison-pair').innerHTML = `${choice(a)}<div class="comparison-arrow" aria-hidden="true">⇄</div>${choice(b)}`;
+}
+
 function renderState(s) {
-  $('spent').textContent = fmt(s.spent);
-  $('ceiling').textContent = fmt(s.ceiling);
-  const pct = s.ceiling > 0 ? Math.min(100, (s.spent / s.ceiling) * 100) : 0;
-  $('meter-fill').style.width = pct + '%';
-  $('budget-a11y-text').textContent = `${fmt(s.spent)} of ${fmt(s.ceiling)} spent`;
+  const remainingPct = s.ceiling > 0 ? Math.round((s.remaining / s.ceiling) * 100) : 0;
+  $('remaining-percent').textContent = `${remainingPct}%`;
+  $('remaining-detail').textContent = `${fmt(s.remaining)} of ${fmt(s.ceiling)} points left`;
+  $('meter-fill').style.width = remainingPct + '%';
+  $('meter-fill').style.background = remainingPct === 0
+    ? 'var(--push)'
+    : remainingPct < 40 ? 'var(--digest)' : 'var(--ok)';
+  $('budget-a11y-text').textContent = `${remainingPct}% remaining; ${fmt(s.remaining)} of ${fmt(s.ceiling)} points left`;
 
   const focus = $('focus-state');
   focus.dataset.focus = String(s.focusActive);
-  focus.textContent = s.focusActive ? 'FOCUSING' : 'OPEN';
+  focus.textContent = s.focusActive ? 'FOCUS MODE ON' : 'OPEN';
 
   $('next-digest').textContent = time(s.nextDigestAt);
   $('c-received').textContent = s.received;
@@ -343,7 +476,14 @@ function renderState(s) {
     const el = document.createElement('span');
     el.className = 'chip';
     el.dataset.live = String(live);
-    el.textContent = name;
+    if (name === 'discord' || name === 'slack') {
+      el.innerHTML = `${platformIcon(name)}<span>${name}</span>`;
+      el.style.display = 'inline-flex';
+      el.style.alignItems = 'center';
+      el.style.gap = '5px';
+    } else {
+      el.textContent = name;
+    }
     $('adapters').append(el);
   }
 
@@ -359,6 +499,7 @@ function renderState(s) {
         : 'No scenario source configured.';
 
   renderSummary(s);
+  renderComparison(s);
 }
 
 /* ---- Notification summary ----------------------------------------------
@@ -367,7 +508,7 @@ function renderState(s) {
 
 const GROUPS = [
   { routes: ['push', 'call'], route: 'push', title: 'Interrupted you', none: 'Nothing was worth interrupting you for.' },
-  { routes: ['digest'], route: 'digest', title: 'Waiting in the digest', none: 'Nothing deferred.' },
+  { routes: ['digest'], route: 'digest', title: 'Digest queue', none: 'Nothing in the digest queue.' },
   { routes: ['hold'], route: 'hold', title: 'Held silently', none: 'Nothing held.' },
 ];
 
@@ -381,13 +522,14 @@ function renderSummary(s) {
 
   const parts = [];
   if (s.interrupted > 0) parts.push(`${plural(s.interrupted, 'interrupted you', 'interrupted you')}`);
-  if (s.digested > 0) parts.push(`${s.digested} waiting for the digest`);
+  if (s.digested > 0) parts.push(`${s.digested} in the digest queue`);
   if (s.held > 0) parts.push(`${s.held} held silently`);
 
+  const budgetDrawn = Math.max(0, s.ceiling - s.remaining);
   $('summary-headline').innerHTML =
     `<b>${s.received}</b> ${s.received === 1 ? 'message' : 'messages'} arrived. ` +
     `${escape(parts.join(', '))}. ` +
-    `<b>${fmt(s.spent)}</b> of <b>${fmt(s.ceiling)}</b> attention spent.`;
+    `<b>${fmt(budgetDrawn)}</b> of <b>${fmt(s.ceiling)}</b> attention spent.`;
   $('summary-claim').textContent = lastClaim;
 
   const host = $('summary-groups');
@@ -581,6 +723,153 @@ $('reset-window').addEventListener('click', async () => {
   await refresh();
 });
 
+/* ---- Voice ---------------------------------------------------------------
+   Speech recognition comes from the browser, which needs no key and no network.
+   Answers come from /api/voice/ask, which reads the ledger and nothing else: a
+   spoken question cannot route a message, interrupt you, or spend the budget.
+
+   Output prefers the server voice when one is configured and falls back to
+   browser synthesis on any failure, so it never goes silent mid demo. */
+
+const SUGGESTIONS = [
+  'What did I miss?',
+  'What interrupted me?',
+  'Why did that interrupt me?',
+  'How much attention budget is left?',
+  "What's waiting in the digest?",
+];
+
+let serverVoice = false;
+let recogniser = null;
+let listening = false;
+
+function voiceStatus(message) {
+  $('voice-panel').hidden = false;
+  $('voice-status').textContent = message;
+}
+
+function showVoiceButton(pressed, label) {
+  const btn = $('voice-btn');
+  btn.setAttribute('aria-pressed', String(pressed));
+  $('voice-btn-label').textContent = label;
+}
+
+async function speak(text) {
+  // Cancel anything already talking, so a second question does not queue behind
+  // the answer to the first.
+  window.speechSynthesis?.cancel();
+
+  if (serverVoice) {
+    try {
+      const res = await fetch('/api/voice/speak', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (res.ok) {
+        const audio = new Audio(URL.createObjectURL(await res.blob()));
+        await audio.play();
+        return;
+      }
+    } catch {
+      // Fall through to the browser voice below.
+    }
+  }
+
+  if (!window.speechSynthesis) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1.05;
+  window.speechSynthesis.speak(utterance);
+}
+
+async function ask(transcript) {
+  $('voice-panel').hidden = false;
+  $('voice-said').hidden = false;
+  $('voice-said').textContent = `You asked: ${transcript}`;
+  voiceStatus('Reading the record...');
+
+  const res = await fetch('/api/voice/ask', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ transcript }),
+  });
+  const result = await res.json();
+
+  $('voice-answer').hidden = false;
+  $('voice-answer').textContent = result.text;
+  voiceStatus(`Answered. Intent recognised as ${result.intent}.`);
+  await speak(result.speech);
+}
+
+function setupRecognition() {
+  const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+  if (!Recognition) return null;
+
+  const instance = new Recognition();
+  instance.lang = 'en-GB';
+  instance.interimResults = false;
+  instance.maxAlternatives = 1;
+  instance.continuous = false;
+
+  instance.addEventListener('result', (event) => {
+    const transcript = event.results[0]?.[0]?.transcript ?? '';
+    if (transcript) void ask(transcript);
+  });
+  instance.addEventListener('error', (event) => {
+    voiceStatus(
+      event.error === 'not-allowed'
+        ? 'Microphone permission was refused. Use the suggested questions below instead.'
+        : `Speech recognition problem: ${event.error}. The typed prompts below still work.`,
+    );
+  });
+  instance.addEventListener('end', () => {
+    listening = false;
+    showVoiceButton(false, 'Ask by voice');
+  });
+
+  return instance;
+}
+
+function renderSuggestions(canListen) {
+  const host = $('voice-prompts');
+  host.innerHTML = '';
+  for (const suggestion of SUGGESTIONS) {
+    const button = document.createElement('button');
+    button.className = 'prompt-btn';
+    button.textContent = suggestion;
+    button.addEventListener('click', () => void ask(suggestion));
+    host.append(button);
+  }
+
+  $('voice-note').textContent = canListen
+    ? 'The voice interface only reads the decision record. It cannot route a message, interrupt you, or spend your budget.'
+    : 'This browser has no speech recognition, so use the questions above. Answers are still spoken aloud. The voice interface only reads the decision record and cannot change anything.';
+}
+
+$('voice-btn').addEventListener('click', () => {
+  recogniser ??= setupRecognition();
+
+  if (!recogniser) {
+    $('voice-panel').hidden = false;
+    voiceStatus('This browser cannot listen. Pick one of the questions below instead.');
+    return;
+  }
+
+  if (listening) {
+    recogniser.stop();
+    return;
+  }
+
+  try {
+    recogniser.start();
+    listening = true;
+    showVoiceButton(true, 'Listening, tap to stop');
+    voiceStatus('Listening. Ask what you missed, or why something was routed the way it was.');
+  } catch {
+    voiceStatus('Could not start listening. Try again, or use the questions below.');
+  }
+});
+
 const stream = new EventSource('/api/stream');
 stream.addEventListener('message', (raw) => {
   const event = JSON.parse(raw.data);
@@ -601,8 +890,11 @@ for (const entry of [...entries].reverse()) {
   seen.add(entry.decision.messageId);
   prepend(card(entry.message, entry.decision));
 }
-renderState(await (await fetch('/api/state')).json());
+const initial = await (await fetch('/api/state')).json();
+serverVoice = initial.voice === 'server';
+renderState(initial);
 await loadScenarios();
+renderSuggestions(Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition));
 </script>
 </body>
 </html>

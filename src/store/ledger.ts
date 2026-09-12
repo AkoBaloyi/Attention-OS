@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS decisions (
   window_key     TEXT NOT NULL,
   route          TEXT NOT NULL,
   basis          TEXT NOT NULL,
+  topic          TEXT NOT NULL DEFAULT '',
   cost           REAL NOT NULL,
   budget_before  REAL NOT NULL,
   budget_after   REAL NOT NULL,
@@ -83,7 +84,42 @@ CREATE TABLE IF NOT EXISTS decisions (
 
 CREATE INDEX IF NOT EXISTS idx_decisions_window ON decisions (window_key);
 CREATE INDEX IF NOT EXISTS idx_decisions_recorded ON decisions (recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_decisions_route ON decisions (route);
+CREATE INDEX IF NOT EXISTS idx_messages_person ON messages (person_id);
 `;
+
+/**
+ * Filter for querying the ledger.
+ *
+ * Every field is optional and they combine with AND. Array fields are OR within
+ * themselves, which is what a set of toggled chips means: "push or call", not
+ * "push and call".
+ */
+export type DecisionQuery = {
+  routes?: readonly Route[];
+  platforms?: readonly string[];
+  tiers?: readonly string[];
+  personIds?: readonly string[];
+  channels?: readonly string[];
+  /** Free text across message body, topic, recorded reason and routing basis. */
+  search?: string;
+  minCost?: number;
+  maxCost?: number;
+  /** Restrict to one budget window. Omit to search across all of them. */
+  windowKey?: string;
+  limit?: number;
+};
+
+/** What is actually present in the ledger, so the UI offers real options
+ * rather than a hardcoded list of people who may not have said anything. */
+export type Facets = {
+  routes: Array<{ value: string; count: number }>;
+  platforms: Array<{ value: string; count: number }>;
+  tiers: Array<{ value: string; count: number }>;
+  people: Array<{ value: string; count: number }>;
+  channels: Array<{ value: string; count: number }>;
+  total: number;
+};
 
 export class Ledger {
   readonly #db: DatabaseSync;
@@ -96,6 +132,31 @@ export class Ledger {
     this.#db.exec('PRAGMA journal_mode = WAL;');
     this.#db.exec('PRAGMA foreign_keys = ON;');
     this.#db.exec(SCHEMA);
+    this.#migrate();
+  }
+
+  /**
+   * Adds columns that later versions introduced.
+   *
+   * `CREATE TABLE IF NOT EXISTS` will not alter an existing table, so anyone with
+   * a ledger file from an earlier commit would otherwise hit "no such column"
+   * rather than a clean upgrade. Cheap to do, and the alternative is telling
+   * teammates to delete their database.
+   */
+  #migrate(): void {
+    const columns = new Set(
+      (this.#db.prepare('PRAGMA table_info(decisions)').all() as Array<{ name: string }>).map(
+        (c) => c.name,
+      ),
+    );
+
+    if (!columns.has('topic')) {
+      this.#db.exec("ALTER TABLE decisions ADD COLUMN topic TEXT NOT NULL DEFAULT ''");
+      // Backfill from the envelope we already stored, so old rows are searchable.
+      this.#db.exec(
+        "UPDATE decisions SET topic = COALESCE(json_extract(envelope_json, '$.topic'), '')",
+      );
+    }
   }
 
   /**
@@ -116,10 +177,10 @@ export class Ledger {
     `);
     const insertDecision = this.#db.prepare(`
       INSERT OR IGNORE INTO decisions
-        (message_id, window_key, route, basis, cost, budget_before, budget_after,
+        (message_id, window_key, route, basis, topic, cost, budget_before, budget_after,
          reason, evaluated_at, focus_active, budget_ceiling,
          breakdown_json, context_json, envelope_json, recorded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     insertMessage.run(
@@ -140,6 +201,7 @@ export class Ledger {
       decision.context.nextDigestAt,
       decision.route,
       decision.basis,
+      decision.envelope.topic,
       decision.cost,
       decision.budgetBefore,
       decision.budgetAfter,
@@ -208,16 +270,103 @@ export class Ledger {
 
   /** Most recent decisions, newest first. Feeds the live pipeline view. */
   recent(limit = 50): LedgerEntry[] {
+    return this.query({ limit });
+  }
+
+  /**
+   * Filtered search over decisions, newest first.
+   *
+   * Every value is bound as a parameter and never interpolated into the SQL,
+   * including the `IN` lists, which are built as the right number of
+   * placeholders. Search text goes in as a bound LIKE pattern, so a query of
+   * `%'; DROP TABLE decisions; --` is just an unusual string to look for.
+   */
+  query(q: DecisionQuery = {}): LedgerEntry[] {
+    const where: string[] = [];
+    const params: Array<string | number> = [];
+
+    const inClause = (column: string, values: readonly string[] | undefined) => {
+      if (!values || values.length === 0) return;
+      where.push(`${column} IN (${values.map(() => '?').join(', ')})`);
+      params.push(...values);
+    };
+
+    inClause('d.route', q.routes);
+    inClause('m.platform', q.platforms);
+    inClause('m.relationship_tier', q.tiers);
+    inClause('m.person_id', q.personIds);
+    inClause('m.channel_name', q.channels);
+
+    if (q.windowKey) {
+      where.push('d.window_key = ?');
+      params.push(q.windowKey);
+    }
+
+    if (typeof q.minCost === 'number') {
+      where.push('d.cost >= ?');
+      params.push(q.minCost);
+    }
+    if (typeof q.maxCost === 'number') {
+      where.push('d.cost <= ?');
+      params.push(q.maxCost);
+    }
+
+    const search = q.search?.trim();
+    if (search) {
+      // Basis is included on purpose: "budget_exhausted" is a genuinely useful
+      // thing to search for, since it finds everything the budget displaced.
+      where.push(
+        `(LOWER(m.text) LIKE ? OR LOWER(d.topic) LIKE ? OR LOWER(d.reason) LIKE ?
+          OR LOWER(d.basis) LIKE ? OR LOWER(m.person_id) LIKE ? OR LOWER(m.channel_name) LIKE ?)`,
+      );
+      const pattern = `%${search.toLowerCase()}%`;
+      params.push(pattern, pattern, pattern, pattern, pattern, pattern);
+    }
+
+    const limit = Number.isFinite(q.limit) ? Math.max(1, Math.min(500, q.limit!)) : 50;
+
     const rows = this.#db
       .prepare(
         `SELECT m.*, d.* FROM decisions d
          JOIN messages m ON m.id = d.message_id
+         ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
          ORDER BY d.recorded_at DESC, d.rowid DESC
          LIMIT ?`,
       )
-      .all(limit) as Array<Record<string, unknown>>;
+      .all(...params, limit) as Array<Record<string, unknown>>;
 
     return rows.map(hydrate);
+  }
+
+  /** Values actually present, with counts, for building filter controls. */
+  facets(windowKey?: string): Facets {
+    const scope = windowKey ? 'WHERE d.window_key = ?' : '';
+    const args = windowKey ? [windowKey] : [];
+
+    const group = (column: string) =>
+      this.#db
+        .prepare(
+          `SELECT ${column} AS value, COUNT(*) AS count
+           FROM decisions d JOIN messages m ON m.id = d.message_id
+           ${scope}
+           GROUP BY ${column} ORDER BY count DESC, value ASC`,
+        )
+        .all(...args) as Array<{ value: string; count: number }>;
+
+    const total = this.#db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM decisions d JOIN messages m ON m.id = d.message_id ${scope}`,
+      )
+      .get(...args) as { n: number } | undefined;
+
+    return {
+      routes: group('d.route'),
+      platforms: group('m.platform'),
+      tiers: group('m.relationship_tier'),
+      people: group('m.person_id'),
+      channels: group('m.channel_name'),
+      total: total?.n ?? 0,
+    };
   }
 
   /**

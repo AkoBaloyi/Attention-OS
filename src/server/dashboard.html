@@ -141,6 +141,32 @@
   .voice-answer { font-size: 16px; line-height: 1.55; margin: 0 0 14px; }
   .prompt-btn { font-size: 12.5px; }
 
+  /* ---- Filters ---- */
+  .filters { padding: 14px 16px; margin-bottom: 12px; }
+  .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  input[type='search'] {
+    flex: 1; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px;
+  }
+  input[type='search']::placeholder { color: var(--muted); }
+  input[type='search']:focus-visible { outline: 2px solid var(--discord); outline-offset: 1px; }
+  .facets { display: flex; gap: 16px; flex-wrap: wrap; }
+  .facet { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .facet > span.facet-name {
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; margin-right: 2px;
+  }
+  .toggle {
+    font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+  }
+  .toggle[aria-pressed='true'] {
+    background: var(--panel-2); color: var(--text); border-color: var(--muted); font-weight: 600;
+  }
+  .toggle b { font-weight: 400; opacity: .65; margin-left: 3px; }
+  .filter-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+  mark { background: var(--digest-bg); color: var(--digest-fg); border-radius: 3px; padding: 0 2px; }
+
   /* Keep setup controls compact so the decision evidence stays above the fold. */
   @media (min-width: 960px) {
     .bar {
@@ -164,25 +190,30 @@
   .mode-note[data-mode='replay'] { color: var(--digest-fg); background: var(--warn-bg); }
   .mode-note[data-mode='none'] { color: var(--muted); background: var(--panel-2); }
 
-  /* ---- Cross-platform comparison --------------------------------------- */
+  /* ---- Shared-budget decision flow ------------------------------------- */
   .comparison { padding: 16px 18px; border-color: color-mix(in srgb, var(--discord) 32%, var(--line)); }
   .comparison[hidden] { display: none; }
   .comparison-heading { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 12px; }
   .comparison-heading .label { margin: 0; }
   .comparison-note { margin: 0; color: var(--muted); font-size: 12px; }
-  .comparison-pair { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); gap: 10px; align-items: stretch; }
-  .comparison-choice { border: 1px solid var(--line); background: var(--panel-2); border-radius: 9px; padding: 12px; }
-  .comparison-choice[data-route='push'], .comparison-choice[data-route='call'] { border-color: color-mix(in srgb, var(--push) 55%, var(--line)); }
-  .comparison-choice[data-route='digest'] { border-color: color-mix(in srgb, var(--digest) 55%, var(--line)); }
+  .comparison-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(155px, .42fr) minmax(0, .72fr); gap: 14px; align-items: stretch; }
+  .arbitration-list { display: grid; gap: 8px; }
+  .arbitration-input, .arbitration-outcome { border: 1px solid var(--line); background: var(--panel-2); border-radius: 9px; padding: 10px 12px; }
+  .arbitration-input { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 9px; align-items: center; }
+  .arbitration-outcome { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .arbitration-outcome[data-route='push'], .arbitration-outcome[data-route='call'] { border-color: color-mix(in srgb, var(--push) 55%, var(--line)); }
+  .arbitration-outcome[data-route='digest'] { border-color: color-mix(in srgb, var(--digest) 55%, var(--line)); }
   .comparison-source { display: flex; align-items: center; gap: 7px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
   .source-icon { width: 18px; height: 18px; flex: 0 0 auto; }
-  .comparison-topic { margin: 8px 0 10px; font-size: 14px; font-weight: 650; }
-  .comparison-result { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .comparison-cost { font-size: 25px; font-variant-numeric: tabular-nums; font-weight: 650; }
-  .comparison-arrow { align-self: center; color: var(--muted); text-align: center; font-size: 18px; }
-  @media (max-width: 620px) {
+  .comparison-topic { margin: 0; font-size: 13px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .comparison-cost { font-size: 15px; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .policy-node { display: grid; place-content: center; text-align: center; border: 1px dashed var(--muted); border-radius: 9px; padding: 12px; }
+  .policy-node b { display: block; font-size: 30px; line-height: 1; margin: 5px 0; font-variant-numeric: tabular-nums; }
+  .policy-node span, .policy-node small { color: var(--muted); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+  .policy-node small { letter-spacing: 0; text-transform: none; font-size: 11px; }
+  @media (max-width: 720px) {
     .comparison-pair { grid-template-columns: 1fr; }
-    .comparison-arrow { transform: rotate(90deg); }
+    .policy-node { min-height: 76px; }
   }
 
   /* ---- Notification summary ---- */
@@ -320,7 +351,7 @@
 
   <section class="panel comparison" id="comparison" hidden aria-labelledby="comparison-label">
     <div class="comparison-heading">
-      <p class="label" id="comparison-label">Cross-platform arbitration</p>
+      <p class="label" id="comparison-label">Shared-budget decision</p>
       <p class="comparison-note" id="comparison-note"></p>
     </div>
     <div class="comparison-pair" id="comparison-pair"></div>
@@ -346,6 +377,22 @@
     <p class="label" id="stream-label">
       Decisions. Open one to see perception, cost, budget and route.
     </p>
+
+    <div class="panel filters" role="search" aria-label="Filter decisions">
+      <div class="filter-row">
+        <label class="visually-hidden" for="search">Search decisions</label>
+        <input
+          id="search"
+          type="search"
+          placeholder="Search text, topic, reason, basis, person or channel"
+          autocomplete="off"
+        />
+        <button id="clear-filters" hidden>Clear filters</button>
+      </div>
+      <div class="facets" id="facets"></div>
+      <p class="filter-note" id="filter-note" role="status" aria-live="polite"></p>
+    </div>
+
     <div class="stream" id="stream">
       <p class="empty">No messages yet. Run a scenario, or post in a connected channel.</p>
     </div>
@@ -359,7 +406,12 @@ const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', mi
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 let seen = new Set();
+/** Filtered, drives the card stream. */
 let entries = [];
+/** Unfiltered for the window, drives the summary. Kept separate on purpose: a
+ *  summary that narrowed when you searched would disagree with the counters
+ *  sitting directly above it. */
+let summaryEntries = [];
 let lastClaim = '';
 
 /* ---- Theme ---------------------------------------------------------------
@@ -405,12 +457,20 @@ function platformIcon(platform) {
   </svg>`;
 }
 
-function latestComparison() {
-  for (let first = 0; first < entries.length; first++) {
-    const a = entries[first];
+function entriesInWindow(windowKey) {
+  // Deliberately reads the unfiltered window set rather than the filtered
+  // stream. The summary and the arbitration panel must not shrink when someone
+  // searches, or they would contradict the counters sitting above them.
+  return summaryEntries.filter((entry) => entry.decision.context.nextDigestAt === windowKey);
+}
+
+function latestComparison(windowKey) {
+  const currentEntries = entriesInWindow(windowKey);
+  for (let first = 0; first < currentEntries.length; first++) {
+    const a = currentEntries[first];
     if (!['push', 'call', 'digest'].includes(a.decision.route)) continue;
-    for (let second = first + 1; second < entries.length; second++) {
-      const b = entries[second];
+    for (let second = first + 1; second < currentEntries.length; second++) {
+      const b = currentEntries[second];
       if (a.message.platform === b.message.platform) continue;
       if (!['push', 'call', 'digest'].includes(b.decision.route)) continue;
       const secondsApart = Math.abs(new Date(a.recordedAt) - new Date(b.recordedAt)) / 1000;
@@ -421,7 +481,7 @@ function latestComparison() {
 }
 
 function renderComparison(s) {
-  const pair = latestComparison();
+  const pair = latestComparison(s.nextDigestAt);
   const section = $('comparison');
   if (!pair) {
     section.hidden = true;
@@ -430,17 +490,26 @@ function renderComparison(s) {
 
   const [a, b] = pair;
   section.hidden = false;
-  $('comparison-note').textContent = `${s.focusActive ? 'Focus mode on' : 'Open'} · ${Math.round((s.remaining / s.ceiling) * 100)}% attention remaining`;
-  const choice = (entry) => `
-    <article class="comparison-choice" data-route="${entry.decision.route}">
-      <div class="comparison-source">${platformIcon(entry.message.platform)}${escape(entry.message.platform)}</div>
-      <p class="comparison-topic">${escape(entry.decision.envelope.topic)}</p>
-      <div class="comparison-result">
-        <span class="comparison-cost">${fmt(entry.decision.cost)}</span>
-        <span class="route" data-route="${entry.decision.route}">${escape(entry.decision.route)}</span>
+  const remainingPct = s.ceiling > 0 ? Math.round((s.remaining / s.ceiling) * 100) : 0;
+  $('comparison-note').textContent = 'Both messages passed through the same policy.';
+  const input = (entry) => `
+    <article class="arbitration-input">
+      ${platformIcon(entry.message.platform)}
+      <div>
+        <div class="comparison-source">${escape(entry.message.platform)}</div>
+        <p class="comparison-topic">${escape(entry.decision.envelope.topic)}</p>
       </div>
+      <span class="comparison-cost">${fmt(entry.decision.cost)}</span>
     </article>`;
-  $('comparison-pair').innerHTML = `${choice(a)}<div class="comparison-arrow" aria-hidden="true">⇄</div>${choice(b)}`;
+  const outcome = (entry) => `
+    <article class="arbitration-outcome" data-route="${entry.decision.route}">
+      <span>${escape(entry.decision.envelope.topic)}</span>
+      <span class="route" data-route="${entry.decision.route}">${escape(entry.decision.route)}</span>
+    </article>`;
+  $('comparison-pair').innerHTML = `
+    <div class="arbitration-list">${input(a)}${input(b)}</div>
+    <div class="policy-node"><span>shared budget</span><b>${remainingPct}%</b><small>same deterministic policy</small></div>
+    <div class="arbitration-list">${outcome(a)}${outcome(b)}</div>`;
 }
 
 function renderState(s) {
@@ -520,28 +589,26 @@ function renderSummary(s) {
     return;
   }
 
-  const parts = [];
-  if (s.interrupted > 0) parts.push(`${plural(s.interrupted, 'interrupted you', 'interrupted you')}`);
-  if (s.digested > 0) parts.push(`${s.digested} in the digest queue`);
-  if (s.held > 0) parts.push(`${s.held} held silently`);
-
-  const budgetDrawn = Math.max(0, s.ceiling - s.remaining);
+  const share = (count) => Math.round((count / s.received) * 100);
   $('summary-headline').innerHTML =
     `<b>${s.received}</b> ${s.received === 1 ? 'message' : 'messages'} arrived. ` +
-    `${escape(parts.join(', '))}. ` +
-    `<b>${fmt(budgetDrawn)}</b> of <b>${fmt(s.ceiling)}</b> attention spent.`;
+    `<b>${share(s.held)}%</b> held, <b>${share(s.digested)}%</b> in the digest queue, ` +
+    `<b>${share(s.interrupted)}%</b> interrupted. ` +
+    `<b>${Math.round((s.remaining / s.ceiling) * 100)}%</b> attention remaining.`;
   $('summary-claim').textContent = lastClaim;
 
   const host = $('summary-groups');
   host.innerHTML = '';
+  const currentEntries = entriesInWindow(s.nextDigestAt);
   for (const group of GROUPS) {
-    const matching = entries.filter((e) => group.routes.includes(e.decision.route));
+    const matching = currentEntries.filter((e) => group.routes.includes(e.decision.route));
     const section = document.createElement('div');
     section.className = 'group';
     section.dataset.route = group.route;
 
     const heading = document.createElement('h3');
-    heading.textContent = `${group.title} (${matching.length})`;
+    const percentage = Math.round((matching.length / s.received) * 100);
+    heading.textContent = `${group.title} · ${percentage}% (${matching.length})`;
     section.append(heading);
 
     if (matching.length === 0) {
@@ -601,8 +668,8 @@ function card(message, decision) {
         <span class="spacer"></span>
         <span class="route" data-route="${decision.route}">${decision.route}</span>
       </div>
-      <p class="msg">${escape(message.text)}</p>
-      <p class="sum-reason">${escape(decision.reason)}</p>
+      <p class="msg">${highlight(message.text)}</p>
+      <p class="sum-reason">${highlight(decision.reason)}</p>
       <span class="hint">Open for perception, cost, budget and route</span>
     </summary>
     <div class="pipeline">
@@ -670,11 +737,136 @@ function escape(value) {
   );
 }
 
+/* ---- Filtering ----------------------------------------------------------
+   Filters run in SQL on the server, so they keep working past the number of
+   cards this view holds. They only narrow what is shown: nothing is
+   re-evaluated and no decision changes because you searched for it. */
+
+const FACET_GROUPS = [
+  { key: 'route', name: 'route', from: 'routes' },
+  { key: 'platform', name: 'platform', from: 'platforms' },
+  { key: 'tier', name: 'tier', from: 'tiers' },
+  { key: 'person', name: 'person', from: 'people' },
+  { key: 'channel', name: 'channel', from: 'channels' },
+];
+
+const active = new Map(FACET_GROUPS.map((g) => [g.key, new Set()]));
+let searchTerm = '';
+
+function filtersActive() {
+  return searchTerm.trim().length > 0 || [...active.values()].some((set) => set.size > 0);
+}
+
+function buildQuery() {
+  const params = new URLSearchParams();
+  for (const [key, values] of active) {
+    for (const value of values) params.append(key, value);
+  }
+  if (searchTerm.trim()) params.set('q', searchTerm.trim());
+  params.set('limit', '200');
+  return params.toString();
+}
+
+async function renderFacets() {
+  const facets = await (await fetch('/api/facets')).json();
+  const host = $('facets');
+  host.innerHTML = '';
+
+  for (const group of FACET_GROUPS) {
+    const values = facets[group.from] ?? [];
+    if (values.length === 0) continue;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'facet';
+    const name = document.createElement('span');
+    name.className = 'facet-name';
+    name.textContent = group.name;
+    wrapper.append(name);
+
+    for (const { value, count } of values) {
+      const selected = active.get(group.key).has(value);
+      const button = document.createElement('button');
+      button.className = 'toggle';
+      button.type = 'button';
+      button.setAttribute('aria-pressed', String(selected));
+      const label = group.key === 'person' ? shortPerson(value) : value;
+      button.innerHTML = `${escape(label)}<b>${count}</b>`;
+      button.addEventListener('click', async () => {
+        const set = active.get(group.key);
+        set.has(value) ? set.delete(value) : set.add(value);
+        await applyFilters();
+      });
+      wrapper.append(button);
+    }
+    host.append(wrapper);
+  }
+}
+
+/** Highlights the matched term so it is obvious why a row came back. */
+function highlight(text) {
+  const term = searchTerm.trim();
+  if (!term) return escape(text);
+  const pattern = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return escape(text).replace(pattern, '<mark>$1</mark>');
+}
+
+/** Fetches both collections together so they can never disagree. */
+async function loadEntries() {
+  const [filtered, unfiltered] = await Promise.all([
+    fetch(`/api/decisions?${buildQuery()}`).then((r) => r.json()),
+    fetch('/api/decisions?limit=200').then((r) => r.json()),
+  ]);
+  entries = filtered;
+  summaryEntries = unfiltered;
+}
+
+async function applyFilters() {
+  await loadEntries();
+
+  const stream = $('stream');
+  stream.innerHTML = '';
+  seen = new Set();
+
+  if (entries.length === 0) {
+    stream.innerHTML = `<p class="empty">${
+      filtersActive() ? 'Nothing matches those filters.' : 'No messages yet. Run a scenario, or post in a connected channel.'
+    }</p>`;
+  } else {
+    for (const entry of [...entries].reverse()) {
+      seen.add(entry.decision.messageId);
+      prepend(card(entry.message, entry.decision));
+    }
+  }
+
+  $('clear-filters').hidden = !filtersActive();
+  $('filter-note').textContent = filtersActive()
+    ? `Showing ${entries.length} of ${$('c-received').textContent} in this window. Filtering narrows the view only, it does not change any decision.`
+    : '';
+
+  await renderFacets();
+}
+
+let searchTimer;
+$('search').addEventListener('input', (event) => {
+  searchTerm = event.target.value;
+  // Debounced so typing does not fire a query per keystroke.
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => void applyFilters(), 180);
+});
+
+$('clear-filters').addEventListener('click', async () => {
+  searchTerm = '';
+  $('search').value = '';
+  for (const set of active.values()) set.clear();
+  await applyFilters();
+});
+
 /* ---- Wiring ------------------------------------------------------------- */
 
 async function refresh() {
-  entries = await (await fetch('/api/decisions')).json();
+  await loadEntries();
   renderState(await (await fetch('/api/state')).json());
+  await renderFacets();
 }
 
 async function loadScenarios() {
@@ -873,25 +1065,33 @@ $('voice-btn').addEventListener('click', () => {
 const stream = new EventSource('/api/stream');
 stream.addEventListener('message', (raw) => {
   const event = JSON.parse(raw.data);
+
+  if (event.kind === 'error') {
+    prepend(errorCard(event));
+    void refresh();
+    return;
+  }
+
   if (event.kind === 'decision') {
+    // With filters on, a new decision may not belong in the view, and only the
+    // server knows whether it matches. Re-query rather than guess.
+    if (filtersActive()) {
+      void applyFilters();
+      return;
+    }
     if (!seen.has(event.decision.messageId)) {
       seen.add(event.decision.messageId);
       prepend(card(event.message, event.decision));
     }
-  } else if (event.kind === 'error') {
-    prepend(errorCard(event));
   }
+
   void refresh();
 });
 
 // Backfill so a reload mid demo does not show an empty screen.
-entries = await (await fetch('/api/decisions')).json();
-for (const entry of [...entries].reverse()) {
-  seen.add(entry.decision.messageId);
-  prepend(card(entry.message, entry.decision));
-}
 const initial = await (await fetch('/api/state')).json();
 serverVoice = initial.voice === 'server';
+await applyFilters();
 renderState(initial);
 await loadScenarios();
 renderSuggestions(Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition));

@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { ceilingFor, computeNextDigestAt, systemClock, type Clock } from '../contracts/context.ts';
-import type { Ledger } from '../store/ledger.ts';
+import type { DecisionQuery, Ledger } from '../store/ledger.ts';
 import type { Pipeline } from '../runtime/pipeline.ts';
 import { SCENARIOS, findScenario, type Scenario } from '../scenarios/reference.ts';
 import { answer } from '../voice/ask.ts';
@@ -116,8 +116,18 @@ export function createApp(deps: ServerDeps) {
     }
 
     if (path === '/api/decisions') {
-      const limit = Number(url.searchParams.get('limit') ?? 60);
-      json(res, 200, deps.ledger.recent(Number.isFinite(limit) ? limit : 60));
+      // Filtering happens in SQL rather than in the client so it keeps working
+      // past the number of cards the view holds. It only ever narrows what is
+      // shown: no decision is re-evaluated and nothing is recomputed.
+      json(res, 200, deps.ledger.query(parseQuery(url, windowKey())));
+      return;
+    }
+
+    if (path === '/api/facets') {
+      // Scoped to the current window by default, since that is what the stream
+      // shows. `?all=1` widens it to the whole ledger.
+      const all = url.searchParams.get('all') === '1';
+      json(res, 200, deps.ledger.facets(all ? undefined : windowKey()));
       return;
     }
 
@@ -270,6 +280,42 @@ export function createApp(deps: ServerDeps) {
       sseClients.clear();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
+  };
+}
+
+/**
+ * Turns query string parameters into a DecisionQuery.
+ *
+ * Repeatable parameters are read with getAll, so `?route=push&route=call` means
+ * "either", which is what a pair of toggled chips represents. Nothing here is
+ * concatenated into SQL: the ledger binds every value.
+ */
+function parseQuery(url: URL, currentWindow: string): DecisionQuery {
+  const p = url.searchParams;
+  const many = (key: string) => {
+    const values = p.getAll(key).flatMap((v) => v.split(',')).map((v) => v.trim()).filter(Boolean);
+    return values.length > 0 ? values : undefined;
+  };
+  const num = (key: string) => {
+    const raw = p.get(key);
+    if (raw === null) return undefined;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : undefined;
+  };
+
+  return {
+    routes: many('route') as DecisionQuery['routes'],
+    platforms: many('platform'),
+    tiers: many('tier'),
+    personIds: many('person'),
+    channels: many('channel'),
+    search: p.get('q') ?? undefined,
+    minCost: num('minCost'),
+    maxCost: num('maxCost'),
+    // Scoped to the current window by default, so the stream always agrees with
+    // the counters sitting above it. `?window=all` searches the whole history.
+    windowKey: p.get('window') === 'all' ? undefined : currentWindow,
+    limit: num('limit') ?? 60,
   };
 }
 

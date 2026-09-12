@@ -11,6 +11,7 @@
     "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/main.ts",
     "demo": "node --disable-warning=ExperimentalWarning tools/demo.ts",
     "voice": "node --disable-warning=ExperimentalWarning tools/voice-demo.ts",
+    "search": "node --disable-warning=ExperimentalWarning tools/search-demo.ts",
     "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.ts\"",
     "test:watch": "node --disable-warning=ExperimentalWarning --test --watch \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"

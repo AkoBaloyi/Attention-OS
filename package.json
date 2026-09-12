@@ -8,8 +8,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "test": "node --test \"test/**/*.test.ts\"",
-    "test:watch": "node --test --watch \"test/**/*.test.ts\"",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.ts\"",
+    "test:watch": "node --disable-warning=ExperimentalWarning --test --watch \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

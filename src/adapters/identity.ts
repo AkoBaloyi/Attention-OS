@@ -91,6 +91,34 @@ export class IdentityDirectory {
     };
   }
 
+  /**
+   * Looks a person up by canonical id directly, bypassing platform ids.
+   *
+   * Needed where a platform cannot give a stable per-author id, such as Slack's
+   * username override. Unknown ids resolve to the lowest tier rather than
+   * throwing, so a stale configuration degrades to "treat as a stranger" instead
+   * of dropping messages.
+   */
+  resolveByPersonId(personId: string, displayNameHint?: string): ResolvedIdentity {
+    const mapped = this.#people.find((p) => p.personId === personId);
+
+    if (mapped) {
+      return {
+        personId: mapped.personId,
+        displayName: mapped.displayName,
+        relationshipTier: mapped.tier,
+        inferred: false,
+      };
+    }
+
+    return {
+      personId,
+      displayName: displayNameHint ?? personId,
+      relationshipTier: 'other',
+      inferred: true,
+    };
+  }
+
   /** People with an explicit mapping. Used by the dashboard's allow-list UI. */
   people(): readonly PersonMapping[] {
     return this.#people;

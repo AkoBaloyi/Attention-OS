@@ -35,6 +35,19 @@ export type SlackAdapterConfig = {
   ownerUserId: string;
   /** The agent's own bot user id, so it never perceives its own output. */
   selfUserId?: string;
+  /**
+   * Maps a `username` override to a canonical person id.
+   *
+   * Unlike Discord webhooks, which each get their own author id, Slack's
+   * `chat.postMessage` username override leaves every message carrying the same
+   * bot id. Without this the scenario injector could not post as two different
+   * people, and since the relationship tier is a cost multiplier, the whole
+   * cross-platform comparison would collapse into one tier.
+   *
+   * This is a demo affordance and it is deliberately explicit rather than
+   * inferred: a username only resolves if the operator listed it here.
+   */
+  usernameToPersonId?: Readonly<Record<string, string>>;
 };
 
 export function normaliseSlackMessage(
@@ -47,7 +60,15 @@ export function normaliseSlackMessage(
   if (config.selfUserId && raw.user === config.selfUserId) return null;
   if (!raw.text || raw.text.trim().length === 0) return null;
 
-  const identity = config.identity.resolve('slack', raw.user, raw.userName);
+  // A listed username override resolves to that person; anything else falls
+  // through to normal user-id resolution.
+  const overridePersonId = raw.userName
+    ? config.usernameToPersonId?.[raw.userName]
+    : undefined;
+
+  const identity = overridePersonId
+    ? config.identity.resolveByPersonId(overridePersonId, raw.userName)
+    : config.identity.resolve('slack', raw.user, raw.userName);
 
   return {
     // ts alone is only unique per channel, so the channel has to be in the key.

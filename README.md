@@ -78,16 +78,57 @@ Two contract rules hold it together:
 
 Every `Decision` carries the envelope and the full context that produced it, so the arithmetic can be re-derived by hand from a single row. That is the difference between claiming the policy is deterministic and showing it.
 
+## The scenario injector
+
+The cross-platform choice depends on two messages landing seconds apart in two different apps. Seeding a corpus gives you the content but not the timing, and typing fast in two windows while recording is not a plan. So scenarios are injected on a controlled timer.
+
+They are posted **through the real Discord and Slack APIs**, not handed to the pipeline directly. Injecting canonical messages straight into the runtime would bypass the adapters, the normalisers and identity resolution, so the demo would prove nothing about the system that actually runs. Every injected message goes out over the network and comes back in through the same path a human message takes.
+
+Distinct authors matter, because relationship tier is a cost multiplier. Discord webhooks each carry their own author id, which gives that for free. Slack's username override does not, which is why the Slack adapter has an explicit `usernameToPersonId` map.
+
+If no credentials are configured, the endpoint returns 409 and says why rather than faking it.
+
 ## Running it
 
 Requires Node 24 or later, which runs the TypeScript directly with no build step.
 
 ```bash
 npm install
-npm test          # the three scenarios and the contract guards
+npm test           # 75 tests: the scenarios, the contracts, the ledger, the HTTP surface
 npm run typecheck
+npm start          # dashboard on http://localhost:4317
 ```
+
+It starts with no credentials at all and degrades honestly instead of refusing to run:
+
+| Missing | Behaviour |
+|---|---|
+| `OPENAI_API_KEY` | Scripted perception, which replays the verified reference envelopes and applies crude keyword rules to anything else at 0.5 confidence. The dashboard reports perception as `stub`. |
+| `DISCORD_BOT_TOKEN` | No Discord source. Reported on the dashboard. |
+| `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` | No Slack source. Reported on the dashboard. |
+| Injector config | Scenario endpoints return 409 explaining that they post through the real APIs by design. |
+
+The dashboard never shows a source as live when it is not, so a demo cannot accidentally imply a platform is connected.
+
+To go live: copy `.env.example` to `.env` for secrets, and `attention.config.example.json` to `attention.config.json` for structure. Secrets in the environment, structure in the committed example, no token anywhere near the repo.
+
+## Layout
+
+```
+src/contracts/    the shapes everything agrees on, and the rules they enforce
+src/policy/       the cost model and the routing engine. No model involvement.
+src/perception/   LLM boundary, prompt, and the scripted stand-in
+src/adapters/     Discord, Slack, and canonical identity
+src/runtime/      the single evaluation funnel and the pipeline
+src/store/        the sqlite decision ledger
+src/scenarios/    the reference scenarios and the injector
+src/server/       node:http API and the single-page dashboard
+```
+
+There is no bundler and no frontend framework. The dashboard is one self-contained page served by the same process, so there is no build step to break, no second dev server, and `npm start` runs the entire demo in one command. When you are recording a two minute video, the number of processes that can fail matters more than the number of components you used.
 
 ## Status
 
-Built for a hackathon. The policy core, contracts and scenario verification are complete and green. Adapters, perception, persistence, dashboard and the scenario injector are in progress.
+The spine is complete and green: both adapters, canonical identity, perception with its contract guards, the deterministic policy engine, the persisted ledger, the live dashboard and the scenario injector.
+
+Not built, and deliberately so: preference learning, of which there is none by design, since always-allow rules are explicit and deterministic instead. The calendar write-back for the commitment ladder and the outbound call rung are both scaffolded in the cost model but not wired.

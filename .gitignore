@@ -9,9 +9,13 @@ build/
 
 # Local ledger
 *.sqlite
-*.sqlite-journal
+*.sqlite-*
 *.db
 data/
+
+# Real config. The example is committed, this is not: it holds channel ids,
+# webhook urls (which are themselves credentials) and personal user ids.
+attention.config.json
 
 # Editor / OS
 .DS_Store

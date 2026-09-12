@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Attention OS</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14181d;
+    --panel-2: #1b2027;
+    --line: #262d36;
+    --text: #e8ecf1;
+    --muted: #9aa5b1;
+    --hold: #6b7684;
+    --digest: #d99a2b;
+    --push: #e5484d;
+    --call: #ff2d55;
+    --ok: #3dd68c;
+    --slack: #cfa3f0;
+    --discord: #8ba4f9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    padding: 16px 24px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  h1 { font-size: 17px; margin: 0; letter-spacing: .14em; text-transform: uppercase; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .tagline { color: var(--muted); font-size: 13px; margin: 0; flex: 1 1 320px; min-width: 240px; }
+  .adapters { display: flex; gap: 8px; font-size: 12px; }
+  .chip {
+    padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--muted);
+  }
+  .chip[data-live="true"] { color: var(--ok); border-color: #2a5c45; }
+  main { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px 24px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .label { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+
+  /* The budget gauge is the primary visual. Everything else is secondary. */
+  .budget-figure { font-size: 54px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
+  .budget-figure small { font-size: 20px; color: var(--muted); font-weight: 400; }
+  .meter { height: 10px; border-radius: 999px; background: var(--panel-2); overflow: hidden; margin: 14px 0 8px; }
+  .meter > div { height: 100%; background: linear-gradient(90deg, var(--ok), var(--digest)); transition: width .35s ease; }
+  .state-line { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .state-badge { font-weight: 600; letter-spacing: .1em; }
+  .state-badge[data-focus="true"] { color: var(--digest); }
+  .state-badge[data-focus="false"] { color: var(--ok); }
+
+  .counters { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+  .counter { background: var(--panel-2); border-radius: 8px; padding: 10px 12px; }
+  .counter b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .counter span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+
+  button {
+    font: inherit; color: var(--text); background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px;
+    cursor: pointer; text-align: left; width: 100%;
+  }
+  button:hover:not(:disabled) { border-color: #38414d; }
+  button:focus-visible { outline: 2px solid var(--discord); outline-offset: 2px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button b { display: block; }
+  button em { font-style: normal; color: var(--muted); font-size: 12px; }
+  .stack { display: grid; gap: 8px; }
+
+  /* Decision cards: the pipeline, left to right. */
+  .stream { display: grid; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-left-width: 4px; border-radius: 10px; overflow: hidden; }
+  .card[data-route="hold"]   { border-left-color: var(--hold); }
+  .card[data-route="digest"] { border-left-color: var(--digest); }
+  .card[data-route="push"]   { border-left-color: var(--push); }
+  .card[data-route="call"]   { border-left-color: var(--call); }
+  .card-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 12px 16px 0; }
+  .platform { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+  .platform[data-p="slack"] { color: var(--slack); }
+  .platform[data-p="discord"] { color: var(--discord); }
+  .who { color: var(--muted); font-size: 12px; }
+  .route {
+    margin-left: auto; font-size: 12px; font-weight: 700; letter-spacing: .1em;
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .route[data-route="hold"]   { background: #2a3138; color: #b9c2cc; }
+  .route[data-route="digest"] { background: #3a2f14; color: #f0be62; }
+  .route[data-route="push"]   { background: #46171a; color: #ff9ba0; }
+  .route[data-route="call"]   { background: #5a0f24; color: #ff8fab; }
+  .text { padding: 6px 16px 12px; font-size: 15px; }
+  .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 1px solid var(--line); }
+  .stage { padding: 10px 16px; border-right: 1px solid var(--line); }
+  .stage:last-child { border-right: 0; }
+  .stage h4 { margin: 0 0 6px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .stage dl { margin: 0; font-size: 12px; }
+  .stage dl div { display: flex; justify-content: space-between; gap: 8px; }
+  .stage dt { color: var(--muted); }
+  .stage dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .maths { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 11.5px; color: var(--muted); line-height: 1.7; }
+  .maths b { color: var(--text); }
+  .cost-total { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .reason { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; background: var(--panel-2); }
+  .basis { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+  .empty { color: var(--muted); padding: 28px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+  .err { border-left-color: var(--push); }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Attention <span>OS</span></h1>
+  <p class="tagline">
+    Every notification assumes it deserves your attention. This one makes it prove it.
+    The model perceives, deterministic policy decides.
+  </p>
+  <div class="adapters" id="adapters" aria-label="Connected sources"></div>
+</header>
+
+<main>
+  <div class="stack">
+    <section class="panel" aria-labelledby="budget-label">
+      <p class="label" id="budget-label">Attention budget</p>
+      <p class="budget-figure" style="margin:0">
+        <span id="spent">0.00</span><small> / <span id="ceiling">3.0</span></small>
+      </p>
+      <div class="meter" role="img" aria-labelledby="budget-a11y">
+        <div id="meter-fill" style="width:0%"></div>
+      </div>
+      <p class="visually-hidden" id="budget-a11y">Budget spent: <span id="budget-a11y-text">0 of 3</span></p>
+      <div class="state-line">
+        <span class="state-badge" id="focus-state" data-focus="false">OPEN</span>
+        <span>next digest <b id="next-digest">--:--</b></span>
+      </div>
+
+      <div class="counters">
+        <div class="counter"><b id="c-received">0</b><span>received</span></div>
+        <div class="counter"><b id="c-held">0</b><span>held</span></div>
+        <div class="counter"><b id="c-digested">0</b><span>deferred</span></div>
+        <div class="counter"><b id="c-interrupted">0</b><span>interrupts</span></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="focus-label">
+      <p class="label" id="focus-label">Focus mode</p>
+      <button id="focus-toggle" aria-pressed="false">
+        <b>Enter focus mode</b>
+        <em>Drops the ceiling from 10 to 3.0</em>
+      </button>
+    </section>
+
+    <section class="panel" aria-labelledby="scenario-label">
+      <p class="label" id="scenario-label">Reference scenarios</p>
+      <div class="stack" id="scenarios"></div>
+    </section>
+  </div>
+
+  <section aria-labelledby="stream-label">
+    <p class="label" id="stream-label">Decisions &mdash; message, perception, cost, budget, route</p>
+    <div class="stream" id="stream">
+      <p class="empty">No messages yet. Run a scenario, or post in a connected channel.</p>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => Number(n).toFixed(2);
+const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+let seen = new Set();
+
+function renderState(s) {
+  $('spent').textContent = fmt(s.spent);
+  $('ceiling').textContent = fmt(s.ceiling);
+  const pct = s.ceiling > 0 ? Math.min(100, (s.spent / s.ceiling) * 100) : 0;
+  $('meter-fill').style.width = pct + '%';
+  $('budget-a11y-text').textContent = `${fmt(s.spent)} of ${fmt(s.ceiling)} spent`;
+
+  const focus = $('focus-state');
+  focus.dataset.focus = String(s.focusActive);
+  focus.textContent = s.focusActive ? 'FOCUSING' : 'OPEN';
+
+  $('next-digest').textContent = time(s.nextDigestAt);
+  $('c-received').textContent = s.received;
+  $('c-held').textContent = s.held;
+  $('c-digested').textContent = s.digested;
+  $('c-interrupted').textContent = s.interrupted;
+
+  const toggle = $('focus-toggle');
+  toggle.setAttribute('aria-pressed', String(s.focusActive));
+  toggle.querySelector('b').textContent = s.focusActive ? 'Leave focus mode' : 'Enter focus mode';
+
+  $('adapters').innerHTML = '';
+  const chips = [
+    ['discord', s.adapters.discord],
+    ['slack', s.adapters.slack],
+    [`perception: ${s.adapters.perception}`, s.adapters.perception === 'live'],
+  ];
+  for (const [name, live] of chips) {
+    const el = document.createElement('span');
+    el.className = 'chip';
+    el.dataset.live = String(live);
+    el.textContent = name;
+    $('adapters').append(el);
+  }
+}
+
+/** The arithmetic, spelled out. This is what makes the determinism checkable
+ *  rather than merely claimed. */
+function maths(b) {
+  const parts = [
+    `base <b>${b.base}</b>`,
+    `deadline <b>&times;${b.deadlineMultiplier}</b>`,
+    `required <b>&times;${b.actionRequiredMultiplier}</b>`,
+    `tier <b>&times;${b.tierMultiplier}</b>`,
+    `confidence <b>&times;${b.confidence}</b>`,
+  ];
+  const floor = b.imminentFloorApplied
+    ? '<br>imminent deadline: floored to <b>8</b> before scaling'
+    : '';
+  return parts.join('<br>') + floor;
+}
+
+function card(message, decision) {
+  const el = document.createElement('article');
+  el.className = 'card';
+  el.dataset.route = decision.route;
+
+  const e = decision.envelope;
+  const b = decision.breakdown;
+
+  el.innerHTML = `
+    <div class="card-head">
+      <span class="platform" data-p="${message.platform}">${message.platform}</span>
+      <span class="who">#${escape(message.channelName)} &middot; ${escape(message.personId)} &middot; ${escape(message.relationshipTier)}</span>
+      <span class="route" data-route="${decision.route}">${decision.route}</span>
+    </div>
+    <p class="text">${escape(message.text)}</p>
+    <div class="pipeline">
+      <div class="stage">
+        <h4>Perception</h4>
+        <dl>
+          <div><dt>act</dt><dd>${escape(e.speechAct)}</dd></div>
+          <div><dt>you needed</dt><dd>${e.actionRequired ? 'yes' : 'no'}</dd></div>
+          <div><dt>if delayed</dt><dd>${escape(e.consequenceOfDelay)}</dd></div>
+          <div><dt>deadline</dt><dd>${e.deadline ? time(e.deadline) : 'none'}</dd></div>
+          <div><dt>confidence</dt><dd>${e.confidence}</dd></div>
+        </dl>
+      </div>
+      <div class="stage">
+        <h4>Cost</h4>
+        <p class="maths" style="margin:0 0 6px">${maths(b)}</p>
+        <p class="cost-total" style="margin:0">${fmt(decision.cost)}</p>
+      </div>
+      <div class="stage">
+        <h4>Budget</h4>
+        <dl>
+          <div><dt>before</dt><dd>${fmt(decision.budgetBefore)}</dd></div>
+          <div><dt>after</dt><dd>${fmt(decision.budgetAfter)}</dd></div>
+          <div><dt>ceiling</dt><dd>${fmt(decision.context.budgetCeiling)}</dd></div>
+          <div><dt>focus</dt><dd>${decision.context.focusActive ? 'on' : 'off'}</dd></div>
+        </dl>
+      </div>
+      <div class="stage">
+        <h4>Route</h4>
+        <p style="margin:0 0 6px"><span class="route" data-route="${decision.route}">${decision.route}</span></p>
+        <p class="basis" style="margin:0">${escape(decision.basis)}</p>
+      </div>
+    </div>
+    <p class="reason">${escape(decision.reason)}</p>
+  `;
+  return el;
+}
+
+function errorCard(event) {
+  const el = document.createElement('article');
+  el.className = 'card err';
+  el.dataset.route = 'push';
+  el.innerHTML = `
+    <div class="card-head">
+      <span class="platform">${escape(event.stage)} failed</span>
+      <span class="who">${escape(event.messageId)}</span>
+    </div>
+    <p class="reason" style="border-top:0">${escape(event.error)}</p>
+  `;
+  return el;
+}
+
+function prepend(node) {
+  const stream = $('stream');
+  const empty = stream.querySelector('.empty');
+  if (empty) empty.remove();
+  stream.prepend(node);
+  while (stream.children.length > 60) stream.lastElementChild.remove();
+}
+
+function escape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+}
+
+async function refreshState() {
+  renderState(await (await fetch('/api/state')).json());
+}
+
+async function loadScenarios() {
+  const scenarios = await (await fetch('/api/scenarios')).json();
+  const host = $('scenarios');
+  host.innerHTML = '';
+  for (const s of scenarios) {
+    const button = document.createElement('button');
+    button.innerHTML = `<b>${escape(s.id)}. ${escape(s.title)}</b><em>${escape(s.proves)}</em>`;
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const res = await fetch(`/api/scenario/${s.id}`, { method: 'POST' });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          prepend(errorCard({ stage: 'injector', messageId: `scenario ${s.id}`, error: body.error ?? res.statusText }));
+        }
+      } finally {
+        setTimeout(() => { button.disabled = false; }, 4000);
+      }
+    });
+    host.append(button);
+  }
+}
+
+$('focus-toggle').addEventListener('click', async () => {
+  const active = $('focus-toggle').getAttribute('aria-pressed') !== 'true';
+  renderState(await (await fetch('/api/focus', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ active }),
+  })).json());
+});
+
+const stream = new EventSource('/api/stream');
+stream.addEventListener('message', (raw) => {
+  const event = JSON.parse(raw.data);
+  if (event.kind === 'decision') {
+    if (seen.has(event.decision.messageId)) return;
+    seen.add(event.decision.messageId);
+    prepend(card(event.message, event.decision));
+  } else if (event.kind === 'error') {
+    prepend(errorCard(event));
+  }
+  void refreshState();
+});
+
+// Backfill so a reload during the demo does not show an empty screen.
+for (const entry of (await (await fetch('/api/decisions')).json()).reverse()) {
+  seen.add(entry.decision.messageId);
+  prepend(card(entry.message, entry.decision));
+}
+await refreshState();
+await loadScenarios();
+</script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+/**
+ * The dashboard server.
+ *
+ * Deliberately node:http and a single self-contained HTML page rather than a
+ * bundler and a framework. There is no build step to break, no second dev
+ * server, no CORS, and `npm start` runs the entire demo in one command. When you
+ * are recording a two minute video, the number of processes that can fail
+ * matters more than the number of components you used.
+ */
+
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+import { ceilingFor, computeNextDigestAt, systemClock, type Clock } from '../contracts/context.ts';
+import type { Ledger } from '../store/ledger.ts';
+import type { Pipeline } from '../runtime/pipeline.ts';
+import { SCENARIOS, findScenario, type Scenario } from '../scenarios/reference.ts';
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+export type FocusController = {
+  isActive(): boolean;
+  set(active: boolean): void;
+};
+
+export type ServerDeps = {
+  ledger: Ledger;
+  pipeline: Pipeline;
+  focus: FocusController;
+  clock?: Clock;
+  /** Runs a scenario against the real platforms. Absent when no adapter
+   * credentials are configured, in which case the endpoint reports why. */
+  runScenario?: (scenario: Scenario) => Promise<void>;
+  /** Which adapters actually connected. Shown on the dashboard so the demo can
+   * never imply a platform is live when it is not. */
+  adapters: () => { discord: boolean; slack: boolean; perception: 'live' | 'stub' };
+};
+
+export function createApp(deps: ServerDeps) {
+  const clock = deps.clock ?? systemClock;
+  const sseClients = new Set<ServerResponse>();
+
+  deps.pipeline.subscribe((event) => {
+    const payload = `data: ${JSON.stringify(event)}\n\n`;
+    for (const client of sseClients) {
+      client.write(payload);
+    }
+  });
+
+  function state() {
+    const windowKey = computeNextDigestAt(clock);
+    const ceiling = ceilingFor(deps.focus.isActive());
+    return {
+      now: clock.now().toISOString(),
+      nextDigestAt: windowKey,
+      focusActive: deps.focus.isActive(),
+      ...deps.ledger.counters(windowKey, ceiling),
+      adapters: deps.adapters(),
+    };
+  }
+
+  const server = createServer((req, res) => {
+    void handle(req, res).catch((error) => {
+      json(res, 500, { error: String(error) });
+    });
+  });
+
+  async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const path = url.pathname;
+
+    if (path === '/' || path === '/index.html') {
+      const html = await readFile(join(here, 'dashboard.html'), 'utf8');
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
+    if (path === '/api/state') {
+      json(res, 200, state());
+      return;
+    }
+
+    if (path === '/api/decisions') {
+      const limit = Number(url.searchParams.get('limit') ?? 60);
+      json(res, 200, deps.ledger.recent(Number.isFinite(limit) ? limit : 60));
+      return;
+    }
+
+    if (path === '/api/digest') {
+      json(res, 200, deps.ledger.digestFor(computeNextDigestAt(clock)));
+      return;
+    }
+
+    if (path === '/api/scenarios') {
+      json(
+        res,
+        200,
+        SCENARIOS.map((s) => ({
+          id: s.id,
+          title: s.title,
+          proves: s.proves,
+          messageCount: s.messages.length,
+        })),
+      );
+      return;
+    }
+
+    if (path === '/api/stream') {
+      res.writeHead(200, {
+        'content-type': 'text/event-stream',
+        'cache-control': 'no-cache',
+        connection: 'keep-alive',
+      });
+      res.write(': connected\n\n');
+      sseClients.add(res);
+      req.on('close', () => sseClients.delete(res));
+      return;
+    }
+
+    if (path === '/api/focus' && req.method === 'POST') {
+      const body = await readJson(req);
+      const active = Boolean((body as { active?: unknown }).active);
+      deps.focus.set(active);
+      deps.pipeline.emit({ kind: 'focus', focusActive: active });
+      json(res, 200, state());
+      return;
+    }
+
+    const scenarioMatch = /^\/api\/scenario\/([A-Za-z0-9_-]+)$/.exec(path);
+    if (scenarioMatch && req.method === 'POST') {
+      const scenario = findScenario(scenarioMatch[1]!);
+      if (!scenario) {
+        json(res, 404, { error: `unknown scenario: ${scenarioMatch[1]}` });
+        return;
+      }
+      if (!deps.runScenario) {
+        // Say exactly why rather than failing vaguely. The injector posts through
+        // the real platform APIs on purpose, so without credentials there is
+        // nothing honest for it to do.
+        json(res, 409, {
+          error:
+            'no platform credentials configured, so there is nothing to inject into. The injector posts through the real Discord and Slack APIs by design.',
+        });
+        return;
+      }
+
+      // Fire and forget: the scenario spaces its messages out over seconds, and
+      // the client is watching the event stream anyway.
+      void deps.runScenario(scenario);
+      json(res, 202, { started: scenario.id, messages: scenario.messages.length });
+      return;
+    }
+
+    json(res, 404, { error: 'not found' });
+  }
+
+  return {
+    server,
+    state,
+    listen: (port: number) =>
+      new Promise<void>((resolve) => server.listen(port, () => resolve())),
+    close: async () => {
+      for (const client of sseClients) client.end();
+      sseClients.clear();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    },
+  };
+}
+
+function json(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(body));
+}
+
+async function readJson(req: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  if (chunks.length === 0) return {};
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    return {};
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "_comment": "Copy to attention.config.json. Structure lives here, secrets live in .env. Relationship tiers are assigned by you, deliberately never inferred by a model.",
+
+  "owner": {
+    "discordUserId": "YOUR_DISCORD_USER_ID",
+    "slackUserId": "YOUR_SLACK_USER_ID"
+  },
+
+  "people": [
+    {
+      "personId": "person:aunt",
+      "displayName": "Aunt Thandi",
+      "tier": "inner",
+      "discordUserIds": ["DISCORD_USER_ID_OF_AUNT"],
+      "slackUserIds": []
+    },
+    {
+      "personId": "person:friend",
+      "displayName": "Sipho",
+      "tier": "inner",
+      "discordUserIds": ["DISCORD_USER_ID_OF_FRIEND"],
+      "slackUserIds": []
+    },
+    {
+      "personId": "person:colleague",
+      "displayName": "Ops on call",
+      "tier": "work",
+      "discordUserIds": [],
+      "slackUserIds": ["SLACK_USER_ID_OF_COLLEAGUE"]
+    }
+  ],
+
+  "_channels": "Symbolic keys used by the scenarios, mapped to real ids. The scenarios reference family, friends, incidents and dev.",
+  "discordChannels": {
+    "family": "DISCORD_CHANNEL_ID",
+    "friends": "DISCORD_CHANNEL_ID"
+  },
+  "slackChannels": {
+    "incidents": "SLACK_CHANNEL_ID",
+    "dev": "SLACK_CHANNEL_ID"
+  },
+
+  "_webhooks": "One Discord webhook per simulated person. Each webhook carries its own author id, which is what lets injected messages resolve to different people and therefore different tiers. Create these in Channel Settings > Integrations.",
+  "discordWebhooks": {
+    "family": "https://discord.com/api/webhooks/...",
+    "friends": "https://discord.com/api/webhooks/..."
+  },
+
+  "injectorAuthorNames": {
+    "aunt": "Aunt Thandi",
+    "friend": "Sipho",
+    "colleague": "Ops on call"
+  },
+
+  "_slackUsernames": "Slack's username override leaves every injected message carrying the same bot id, unlike Discord webhooks. This maps the override back to a canonical person. Requires the chat:write.customize scope.",
+  "slackUsernameToPersonId": {
+    "Ops on call": "person:colleague"
+  },
+
+  "_alwaysAllow": "Canonical person ids that are promoted past a hold. Deterministic and explicit, deliberately not learned.",
+  "alwaysAllowPersonIds": []
+}

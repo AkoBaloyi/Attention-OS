@@ -19,6 +19,7 @@ import type { PerceptionEnvelope } from '../src/contracts/envelope.ts';
 import { assertValidEnvelope } from '../src/contracts/envelope.ts';
 import {
   buildEvaluationContext,
+  computeNextDigestAt,
   frozenClock,
   BUDGET_CEILING_FOCUS,
 } from '../src/contracts/context.ts';
@@ -66,6 +67,55 @@ describe('the evaluation context is computed in exactly one place', () => {
     const ctx = focusContext();
     assert.equal(ctx.now, NOW);
     assert.equal(ctx.nextDigestAt, '2026-09-12T15:00:00.000Z');
+  });
+
+  test('an anchored window is always a clean hour, whatever the wall clock says', () => {
+    // This is the regression the frozen-clock tests above cannot catch. Late in
+    // the hour, an unanchored window puts the next release only minutes away, so
+    // a twelve minute deadline lands after it, the deadline multiplier does not
+    // apply, and Scenario A quietly costs 7.68 instead of 8.64. Both answers are
+    // correct, which is the problem: the demo would change between takes.
+    const lateInHour = frozenClock('2026-09-12T14:55:00.000Z');
+
+    const unanchored = computeNextDigestAt(lateInHour);
+    assert.equal(unanchored, '2026-09-12T15:00:00.000Z', 'only 5 minutes away');
+
+    const anchored = computeNextDigestAt(lateInHour, '2026-09-12T14:55:00.000Z');
+    assert.equal(anchored, '2026-09-12T15:55:00.000Z', 'a full hour away');
+  });
+
+  test('Scenario A costs the same at 14:55 as at 14:30 once the window is anchored', () => {
+    const lateInHour = frozenClock('2026-09-12T14:55:00.000Z');
+    const anchor = '2026-09-12T14:55:00.000Z';
+
+    const ctx = buildEvaluationContext({
+      clock: lateInHour,
+      focusActive: true,
+      budgetRemaining: BUDGET_CEILING_FOCUS,
+      windowAnchor: anchor,
+    });
+
+    const decision = decide(
+      msg({ id: 'late', platform: 'slack', relationshipTier: 'work' }),
+      envelope({
+        messageId: 'late',
+        consequenceOfDelay: 'severe',
+        deadline: '2026-09-12T15:07:00.000Z', // still 12 minutes out
+        confidence: 0.96,
+      }),
+      ctx,
+    );
+
+    assert.equal(decision.cost, 8.64, 'the published number, at any time of day');
+    assert.equal(decision.breakdown.deadlineMultiplier, 1.5);
+  });
+
+  test('a stale anchor keeps producing sensible windows rather than one in the past', () => {
+    const now = frozenClock('2026-09-12T14:30:00.000Z');
+    // Anchored three and a half hours ago.
+    const next = computeNextDigestAt(now, '2026-09-12T11:00:00.000Z');
+    assert.equal(next, '2026-09-12T15:00:00.000Z');
+    assert.ok(Date.parse(next) > Date.parse(now.now().toISOString()));
   });
 
   test('focus mode lowers the ceiling and clamps the remaining budget to it', () => {

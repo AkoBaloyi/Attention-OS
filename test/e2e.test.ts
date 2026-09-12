@@ -222,6 +222,43 @@ describe('the HTTP surface the dashboard depends on', () => {
     }
   });
 
+  test('the dashboard supports both themes off one set of tokens', async () => {
+    const html = await (await fetch(base)).text();
+    assert.match(html, /\[data-theme='light'\]/, 'light theme overrides');
+    assert.match(html, /\[data-theme='dark'\]/, 'dark theme tokens');
+    assert.match(html, /prefers-color-scheme: light/, 'respects the system preference');
+    assert.match(html, /STORAGE_KEY = 'attention-os-theme'/, 'persists under a stable key');
+    assert.match(html, /localStorage\.setItem\(STORAGE_KEY/, 'remembers an explicit choice');
+  });
+
+  test('decision detail is collapsed by default', async () => {
+    const html = await (await fetch(base)).text();
+    // <details> with no `open` attribute, so cost, budget and the criteria are
+    // hidden until asked for. Native element, so it stays keyboard accessible.
+    assert.match(html, /createElement\('details'\)/);
+    assert.doesNotMatch(html, /<details[^>]+\bopen\b/);
+  });
+
+  test('the notification summary groups by outcome', async () => {
+    const html = await (await fetch(base)).text();
+    assert.match(html, /Notification summary/);
+    for (const group of ['Interrupted you', 'Waiting in the digest', 'Held silently']) {
+      assert.match(html, new RegExp(group));
+    }
+  });
+
+  test('the controls are a horizontal bar, not a sidebar', async () => {
+    const html = await (await fetch(base)).text();
+    assert.match(html, /<div class="bar">/);
+    assert.match(html, /\.bar \{[^}]*display: flex/, 'laid out as a row');
+  });
+
+  test('the dashboard contains no em dashes', async () => {
+    const html = await (await fetch(base)).text();
+    assert.doesNotMatch(html, /\u2014/, 'literal em dash');
+    assert.doesNotMatch(html, /&mdash;/, 'em dash entity');
+  });
+
   test('reports state including the honest adapter status', async () => {
     const state = await getJson<{
       nextDigestAt: string;

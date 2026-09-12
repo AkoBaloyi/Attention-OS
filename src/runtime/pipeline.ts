@@ -36,6 +36,8 @@ export function createPipeline(deps: {
   clock?: Clock;
   /** Read per-message, not captured, so the toggle takes effect immediately. */
   getFocusActive: () => boolean;
+  /** Same reasoning: rolling the window must affect the very next message. */
+  getWindowAnchor?: () => string | undefined;
   getPolicyOptions?: () => PolicyOptions;
   onError?: (error: unknown) => void;
 }): Pipeline {
@@ -75,6 +77,7 @@ export function createPipeline(deps: {
             ledger: deps.ledger,
             clock: deps.clock,
             focusActive: deps.getFocusActive(),
+            windowAnchor: deps.getWindowAnchor?.(),
             policy: deps.getPolicyOptions?.(),
           },
           message,

@@ -1,11 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark light" />
 <title>Attention OS</title>
 <style>
-  :root {
+  /* Dark is the default. Light overrides the same tokens, so every rule below
+     is written once and both themes fall out of it. */
+  :root,
+  [data-theme='dark'] {
     --bg: #0b0d10;
     --panel: #14181d;
     --panel-2: #1b2027;
@@ -13,13 +17,44 @@
     --text: #e8ecf1;
     --muted: #9aa5b1;
     --hold: #6b7684;
-    --digest: #d99a2b;
+    --digest: #e0a53a;
     --push: #e5484d;
     --call: #ff2d55;
     --ok: #3dd68c;
     --slack: #cfa3f0;
     --discord: #8ba4f9;
+    --hold-bg: #2a3138;      --hold-fg: #b9c2cc;
+    --digest-bg: #3a2f14;    --digest-fg: #f0be62;
+    --push-bg: #46171a;      --push-fg: #ff9ba0;
+    --call-bg: #5a0f24;      --call-fg: #ff8fab;
+    --ok-bg: #12291f;
+    --warn-bg: #2e2411;
+    --shadow: none;
   }
+
+  [data-theme='light'] {
+    --bg: #f4f6f9;
+    --panel: #ffffff;
+    --panel-2: #eef1f6;
+    --line: #d5dce6;
+    --text: #10151d;
+    --muted: #55616f;
+    --hold: #6b7684;
+    --digest: #8a5a06;
+    --push: #b8232a;
+    --call: #a10f37;
+    --ok: #12734b;
+    --slack: #6b34a8;
+    --discord: #2b49b8;
+    --hold-bg: #e4e8ee;      --hold-fg: #414c58;
+    --digest-bg: #fbeed2;    --digest-fg: #7a4e04;
+    --push-bg: #fbe0e1;      --push-fg: #9c1c22;
+    --call-bg: #fbdce6;      --call-fg: #8c0c2f;
+    --ok-bg: #e2f3ea;
+    --warn-bg: #fcf1da;
+    --shadow: 0 1px 2px rgba(16, 21, 29, .06);
+  }
+
   * { box-sizing: border-box; }
   body {
     margin: 0;
@@ -27,91 +62,135 @@
     color: var(--text);
     font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .label {
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px; font-weight: 600;
+  }
+
+  /* ---- Header ---- */
   header {
-    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-    padding: 16px 24px; border-bottom: 1px solid var(--line); background: var(--panel);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel);
   }
   h1 { font-size: 17px; margin: 0; letter-spacing: .14em; text-transform: uppercase; }
   h1 span { color: var(--muted); font-weight: 400; }
-  .tagline { color: var(--muted); font-size: 13px; margin: 0; flex: 1 1 320px; min-width: 240px; }
-  .adapters { display: flex; gap: 8px; font-size: 12px; }
+  .tagline { color: var(--muted); font-size: 13px; margin: 0; flex: 1 1 280px; min-width: 220px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip {
-    padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line);
-    background: var(--panel-2); color: var(--muted);
+    font-size: 12px; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
   }
-  .chip[data-live="true"] { color: var(--ok); border-color: #2a5c45; }
-  main { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px 24px; align-items: start; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
-  .label { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  .chip[data-live='true'] { color: var(--ok); border-color: var(--ok); }
 
-  /* The budget gauge is the primary visual. Everything else is secondary. */
-  .budget-figure { font-size: 54px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
-  .budget-figure small { font-size: 20px; color: var(--muted); font-weight: 400; }
-  .meter { height: 10px; border-radius: 999px; background: var(--panel-2); overflow: hidden; margin: 14px 0 8px; }
+  /* ---- Horizontal control bar (was a left sidebar) ---- */
+  .bar {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .bar-cell { padding: 12px 20px; border-right: 1px solid var(--line); }
+  .bar-cell:last-child { border-right: 0; }
+  .bar-cell.grow { flex: 1 1 260px; }
+
+  .budget-figure { font-size: 34px; font-weight: 650; line-height: 1.05; font-variant-numeric: tabular-nums; margin: 0; }
+  .budget-figure small { font-size: 15px; color: var(--muted); font-weight: 400; }
+  .meter { height: 8px; border-radius: 999px; background: var(--panel-2); overflow: hidden; margin: 8px 0 6px; min-width: 180px; }
   .meter > div { height: 100%; background: linear-gradient(90deg, var(--ok), var(--digest)); transition: width .35s ease; }
-  .state-line { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
-  .state-badge { font-weight: 600; letter-spacing: .1em; }
-  .state-badge[data-focus="true"] { color: var(--digest); }
-  .state-badge[data-focus="false"] { color: var(--ok); }
+  .state-line { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+  .state-badge { font-weight: 700; letter-spacing: .1em; }
+  .state-badge[data-focus='true'] { color: var(--digest); }
+  .state-badge[data-focus='false'] { color: var(--ok); }
 
-  .counters { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
-  .counter { background: var(--panel-2); border-radius: 8px; padding: 10px 12px; }
-  .counter b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
-  .counter span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  .counters { display: flex; gap: 18px; }
+  .counter b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .counter span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
 
   button {
     font: inherit; color: var(--text); background: var(--panel-2);
-    border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px;
-    cursor: pointer; text-align: left; width: 100%;
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px; cursor: pointer;
   }
-  button:hover:not(:disabled) { border-color: #38414d; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
   button:focus-visible { outline: 2px solid var(--discord); outline-offset: 2px; }
   button:disabled { opacity: .5; cursor: not-allowed; }
-  button b { display: block; }
-  button em { font-style: normal; color: var(--muted); font-size: 12px; }
-  .stack { display: grid; gap: 8px; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .scenario-btn { text-align: left; }
+  .scenario-btn b { display: block; font-size: 13px; }
+  .scenario-btn em { font-style: normal; color: var(--muted); font-size: 11px; }
 
-  /* Decision cards: the pipeline, left to right. */
-  .stream { display: grid; gap: 12px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-left-width: 4px; border-radius: 10px; overflow: hidden; }
-  .card[data-route="hold"]   { border-left-color: var(--hold); }
-  .card[data-route="digest"] { border-left-color: var(--digest); }
-  .card[data-route="push"]   { border-left-color: var(--push); }
-  .card[data-route="call"]   { border-left-color: var(--call); }
-  .card-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 12px 16px 0; }
-  .platform { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
-  .platform[data-p="slack"] { color: var(--slack); }
-  .platform[data-p="discord"] { color: var(--discord); }
+  /* ---- Body ---- */
+  main { padding: 20px 24px 40px; display: grid; gap: 18px; max-width: 1180px; }
+  .mode-note { font-size: 12px; margin: 0; padding: 9px 12px; border-radius: 8px; }
+  .mode-note[data-mode='inject'] { color: var(--ok); background: var(--ok-bg); }
+  .mode-note[data-mode='replay'] { color: var(--digest-fg); background: var(--warn-bg); }
+  .mode-note[data-mode='none'] { color: var(--muted); background: var(--panel-2); }
+
+  /* ---- Notification summary ---- */
+  .summary { padding: 18px 20px; }
+  .headline { font-size: 17px; margin: 0 0 4px; }
+  .headline b { font-variant-numeric: tabular-nums; }
+  .claim { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+  .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .group { background: var(--panel-2); border-radius: 8px; padding: 12px 14px; }
+  .group h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+  .group[data-route='push'] h3, .group[data-route='call'] h3 { color: var(--push); }
+  .group[data-route='digest'] h3 { color: var(--digest); }
+  .group[data-route='hold'] h3 { color: var(--muted); }
+  .group ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+  .group li { font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+  .group li span.who { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  .group .none { color: var(--muted); font-size: 13px; margin: 0; }
+
+  /* ---- Decision cards: collapsed by default ---- */
+  .stream { display: grid; gap: 10px; }
+  details.card {
+    background: var(--panel); border: 1px solid var(--line); border-left-width: 4px;
+    border-radius: 10px; box-shadow: var(--shadow);
+  }
+  details.card[data-route='hold']   { border-left-color: var(--hold); }
+  details.card[data-route='digest'] { border-left-color: var(--digest); }
+  details.card[data-route='push']   { border-left-color: var(--push); }
+  details.card[data-route='call']   { border-left-color: var(--call); }
+  summary {
+    padding: 12px 16px; cursor: pointer; list-style: none;
+    display: grid; gap: 4px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary:focus-visible { outline: 2px solid var(--discord); outline-offset: -2px; border-radius: 8px; }
+  .sum-top { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .platform { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+  .platform[data-p='slack'] { color: var(--slack); }
+  .platform[data-p='discord'] { color: var(--discord); }
   .who { color: var(--muted); font-size: 12px; }
   .route {
-    margin-left: auto; font-size: 12px; font-weight: 700; letter-spacing: .1em;
-    padding: 3px 10px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .1em;
+    padding: 3px 10px; border-radius: 999px; white-space: nowrap;
   }
-  .route[data-route="hold"]   { background: #2a3138; color: #b9c2cc; }
-  .route[data-route="digest"] { background: #3a2f14; color: #f0be62; }
-  .route[data-route="push"]   { background: #46171a; color: #ff9ba0; }
-  .route[data-route="call"]   { background: #5a0f24; color: #ff8fab; }
-  .text { padding: 6px 16px 12px; font-size: 15px; }
-  .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 1px solid var(--line); }
-  .stage { padding: 10px 16px; border-right: 1px solid var(--line); }
+  .route[data-route='hold']   { background: var(--hold-bg); color: var(--hold-fg); }
+  .route[data-route='digest'] { background: var(--digest-bg); color: var(--digest-fg); }
+  .route[data-route='push']   { background: var(--push-bg); color: var(--push-fg); }
+  .route[data-route='call']   { background: var(--call-bg); color: var(--call-fg); }
+  .spacer { margin-left: auto; }
+  .hint { font-size: 11px; color: var(--muted); }
+  .msg { margin: 0; }
+  .sum-reason { color: var(--muted); font-size: 12.5px; margin: 0; }
+
+  .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); border-top: 1px solid var(--line); }
+  .stage { padding: 12px 16px; border-right: 1px solid var(--line); }
   .stage:last-child { border-right: 0; }
-  .stage h4 { margin: 0 0 6px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .stage h4 { margin: 0 0 7px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
   .stage dl { margin: 0; font-size: 12px; }
   .stage dl div { display: flex; justify-content: space-between; gap: 8px; }
   .stage dt { color: var(--muted); }
   .stage dd { margin: 0; font-variant-numeric: tabular-nums; }
-  .maths { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 11.5px; color: var(--muted); line-height: 1.7; }
+  .maths { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 11.5px; color: var(--muted); line-height: 1.75; margin: 0 0 6px; }
   .maths b { color: var(--text); }
-  .cost-total { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; }
-  .reason { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; background: var(--panel-2); }
-  .basis { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
-  .empty { color: var(--muted); padding: 28px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
-  .mode-note { font-size: 12px; margin: -4px 0 12px; padding: 8px 10px; border-radius: 6px; }
-  .mode-note[data-mode="inject"] { color: var(--ok); background: #12291f; }
-  .mode-note[data-mode="replay"] { color: var(--digest); background: #2e2411; }
-  .mode-note[data-mode="none"] { color: var(--muted); background: var(--panel-2); }
-  .err { border-left-color: var(--push); }
+  .cost-total { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; margin: 0; }
+  .basis { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); margin: 0; }
+  .empty { color: var(--muted); padding: 26px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+  .err { border-left-color: var(--push) !important; }
   .visually-hidden {
     position: absolute; width: 1px; height: 1px; margin: -1px;
     overflow: hidden; clip-path: inset(50%); white-space: nowrap;
@@ -125,56 +204,70 @@
     Every notification assumes it deserves your attention. This one makes it prove it.
     The model perceives, deterministic policy decides.
   </p>
-  <div class="adapters" id="adapters" aria-label="Connected sources"></div>
+  <div class="chips" id="adapters" aria-label="Connected sources"></div>
+  <button id="theme-toggle" aria-pressed="false">
+    <span id="theme-label">Light mode</span>
+  </button>
 </header>
 
-<main>
-  <div class="stack">
-    <section class="panel" aria-labelledby="budget-label">
-      <p class="label" id="budget-label">Attention budget</p>
-      <p class="budget-figure" style="margin:0">
-        <span id="spent">0.00</span><small> / <span id="ceiling">3.0</span></small>
-      </p>
-      <div class="meter" role="img" aria-labelledby="budget-a11y">
-        <div id="meter-fill" style="width:0%"></div>
-      </div>
-      <p class="visually-hidden" id="budget-a11y">Budget spent: <span id="budget-a11y-text">0 of 3</span></p>
-      <div class="state-line">
-        <span class="state-badge" id="focus-state" data-focus="false">OPEN</span>
-        <span>next digest <b id="next-digest">--:--</b></span>
-      </div>
-
-      <div class="counters">
-        <div class="counter"><b id="c-received">0</b><span>received</span></div>
-        <div class="counter"><b id="c-held">0</b><span>held</span></div>
-        <div class="counter"><b id="c-digested">0</b><span>deferred</span></div>
-        <div class="counter"><b id="c-interrupted">0</b><span>interrupts</span></div>
-      </div>
-    </section>
-
-    <section class="panel" aria-labelledby="focus-label">
-      <p class="label" id="focus-label">Controls</p>
-      <div class="stack">
-        <button id="focus-toggle" aria-pressed="false">
-          <b>Enter focus mode</b>
-          <em>Drops the ceiling from 10 to 3.0</em>
-        </button>
-        <button id="reset-window">
-          <b>Roll the budget window</b>
-          <em>Restores the full ceiling. Demo pacing, not a way past the budget.</em>
-        </button>
-      </div>
-    </section>
-
-    <section class="panel" aria-labelledby="scenario-label">
-      <p class="label" id="scenario-label">Reference scenarios</p>
-      <p class="mode-note" id="scenario-mode" role="status"></p>
-      <div class="stack" id="scenarios"></div>
-    </section>
+<div class="bar">
+  <div class="bar-cell">
+    <p class="label">Attention budget</p>
+    <p class="budget-figure">
+      <span id="spent">0.00</span><small> / <span id="ceiling">3.0</span></small>
+    </p>
+    <div class="meter" role="img" aria-labelledby="budget-a11y">
+      <div id="meter-fill" style="width:0%"></div>
+    </div>
+    <p class="visually-hidden" id="budget-a11y">
+      Budget: <span id="budget-a11y-text">0 of 3 spent</span>
+    </p>
+    <div class="state-line">
+      <span class="state-badge" id="focus-state" data-focus="false">OPEN</span>
+      <span>next digest <b id="next-digest">--:--</b></span>
+    </div>
   </div>
 
+  <div class="bar-cell">
+    <p class="label">This window</p>
+    <div class="counters">
+      <div class="counter"><b id="c-received">0</b><span>received</span></div>
+      <div class="counter"><b id="c-held">0</b><span>held</span></div>
+      <div class="counter"><b id="c-digested">0</b><span>deferred</span></div>
+      <div class="counter"><b id="c-interrupted">0</b><span>interrupts</span></div>
+    </div>
+  </div>
+
+  <div class="bar-cell">
+    <p class="label">Controls</p>
+    <div class="btn-row">
+      <button id="focus-toggle" aria-pressed="false">Enter focus mode</button>
+      <button id="reset-window" title="Restores the full ceiling. Demo pacing, not a way past the budget.">
+        Roll window
+      </button>
+    </div>
+  </div>
+
+  <div class="bar-cell grow">
+    <p class="label">Reference scenarios</p>
+    <div class="btn-row" id="scenarios"></div>
+  </div>
+</div>
+
+<main>
+  <p class="mode-note" id="scenario-mode" role="status"></p>
+
+  <section class="panel summary" aria-labelledby="summary-label">
+    <p class="label" id="summary-label">Notification summary</p>
+    <p class="headline" id="summary-headline">Nothing has arrived yet.</p>
+    <p class="claim" id="summary-claim"></p>
+    <div class="groups" id="summary-groups"></div>
+  </section>
+
   <section aria-labelledby="stream-label">
-    <p class="label" id="stream-label">Decisions &mdash; message, perception, cost, budget, route</p>
+    <p class="label" id="stream-label">
+      Decisions. Open one to see perception, cost, budget and route.
+    </p>
     <div class="stream" id="stream">
       <p class="empty">No messages yet. Run a scenario, or post in a connected channel.</p>
     </div>
@@ -185,8 +278,40 @@
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Number(n).toFixed(2);
 const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 let seen = new Set();
+let entries = [];
+let lastClaim = '';
+
+/* ---- Theme ---------------------------------------------------------------
+   Respects the system preference on first visit, then remembers an explicit
+   choice. Both themes drive the same custom properties, so nothing is styled
+   twice. */
+const STORAGE_KEY = 'attention-os-theme';
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const toggle = $('theme-toggle');
+  toggle.setAttribute('aria-pressed', String(theme === 'light'));
+  $('theme-label').textContent = theme === 'light' ? 'Dark mode' : 'Light mode';
+}
+
+const stored = localStorage.getItem(STORAGE_KEY);
+applyTheme(stored ?? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+
+$('theme-toggle').addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem(STORAGE_KEY, next);
+  applyTheme(next);
+});
+
+// Follow the system only while the user has not chosen for themselves.
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (event) => {
+  if (!localStorage.getItem(STORAGE_KEY)) applyTheme(event.matches ? 'light' : 'dark');
+});
+
+/* ---- State -------------------------------------------------------------- */
 
 function renderState(s) {
   $('spent').textContent = fmt(s.spent);
@@ -207,15 +332,14 @@ function renderState(s) {
 
   const toggle = $('focus-toggle');
   toggle.setAttribute('aria-pressed', String(s.focusActive));
-  toggle.querySelector('b').textContent = s.focusActive ? 'Leave focus mode' : 'Enter focus mode';
+  toggle.textContent = s.focusActive ? 'Leave focus mode' : 'Enter focus mode';
 
   $('adapters').innerHTML = '';
-  const chips = [
+  for (const [name, live] of [
     ['discord', s.adapters.discord],
     ['slack', s.adapters.slack],
     [`perception: ${s.adapters.perception}`, s.adapters.perception === 'live'],
-  ];
-  for (const [name, live] of chips) {
+  ]) {
     const el = document.createElement('span');
     el.className = 'chip';
     el.dataset.live = String(live);
@@ -233,26 +357,94 @@ function renderState(s) {
       : s.scenarioMode === 'replay'
         ? 'LOCAL REPLAY. No platform is connected, so these bypass the adapters. Development only, not a demo.'
         : 'No scenario source configured.';
+
+  renderSummary(s);
 }
+
+/* ---- Notification summary ----------------------------------------------
+   The readable rollup. With the cards collapsed by default this is the primary
+   surface, so it has to answer "what happened while I was away" on its own. */
+
+const GROUPS = [
+  { routes: ['push', 'call'], route: 'push', title: 'Interrupted you', none: 'Nothing was worth interrupting you for.' },
+  { routes: ['digest'], route: 'digest', title: 'Waiting in the digest', none: 'Nothing deferred.' },
+  { routes: ['hold'], route: 'hold', title: 'Held silently', none: 'Nothing held.' },
+];
+
+function renderSummary(s) {
+  if (s.received === 0) {
+    $('summary-headline').textContent = 'Nothing has arrived yet.';
+    $('summary-claim').textContent = lastClaim;
+    $('summary-groups').innerHTML = '';
+    return;
+  }
+
+  const parts = [];
+  if (s.interrupted > 0) parts.push(`${plural(s.interrupted, 'interrupted you', 'interrupted you')}`);
+  if (s.digested > 0) parts.push(`${s.digested} waiting for the digest`);
+  if (s.held > 0) parts.push(`${s.held} held silently`);
+
+  $('summary-headline').innerHTML =
+    `<b>${s.received}</b> ${s.received === 1 ? 'message' : 'messages'} arrived. ` +
+    `${escape(parts.join(', '))}. ` +
+    `<b>${fmt(s.spent)}</b> of <b>${fmt(s.ceiling)}</b> attention spent.`;
+  $('summary-claim').textContent = lastClaim;
+
+  const host = $('summary-groups');
+  host.innerHTML = '';
+  for (const group of GROUPS) {
+    const matching = entries.filter((e) => group.routes.includes(e.decision.route));
+    const section = document.createElement('div');
+    section.className = 'group';
+    section.dataset.route = group.route;
+
+    const heading = document.createElement('h3');
+    heading.textContent = `${group.title} (${matching.length})`;
+    section.append(heading);
+
+    if (matching.length === 0) {
+      const none = document.createElement('p');
+      none.className = 'none';
+      none.textContent = group.none;
+      section.append(none);
+    } else {
+      const list = document.createElement('ul');
+      for (const entry of matching) {
+        const item = document.createElement('li');
+        item.innerHTML =
+          `<span>${escape(entry.decision.envelope.topic)}</span>` +
+          `<span class="who">${escape(shortPerson(entry.message.personId))} in #${escape(entry.message.channelName)}</span>`;
+        list.append(item);
+      }
+      section.append(list);
+    }
+    host.append(section);
+  }
+}
+
+function shortPerson(personId) {
+  return String(personId).replace(/^person:/, '').replace(/^unmapped:[a-z]+:/, '');
+}
+
+/* ---- Decision cards ---------------------------------------------------- */
 
 /** The arithmetic, spelled out. This is what makes the determinism checkable
  *  rather than merely claimed. */
 function maths(b) {
-  const parts = [
+  const chain = [
     `base <b>${b.base}</b>`,
     `deadline <b>&times;${b.deadlineMultiplier}</b>`,
     `required <b>&times;${b.actionRequiredMultiplier}</b>`,
     `tier <b>&times;${b.tierMultiplier}</b>`,
     `confidence <b>&times;${b.confidence}</b>`,
-  ];
-  const floor = b.imminentFloorApplied
-    ? '<br>imminent deadline: floored to <b>8</b> before scaling'
-    : '';
-  return parts.join('<br>') + floor;
+  ].join('<br>');
+  return b.imminentFloorApplied
+    ? `${chain}<br>imminent deadline: floored to <b>8</b> before scaling`
+    : chain;
 }
 
 function card(message, decision) {
-  const el = document.createElement('article');
+  const el = document.createElement('details');
   el.className = 'card';
   el.dataset.route = decision.route;
 
@@ -260,12 +452,17 @@ function card(message, decision) {
   const b = decision.breakdown;
 
   el.innerHTML = `
-    <div class="card-head">
-      <span class="platform" data-p="${message.platform}">${message.platform}</span>
-      <span class="who">#${escape(message.channelName)} &middot; ${escape(message.personId)} &middot; ${escape(message.relationshipTier)}</span>
-      <span class="route" data-route="${decision.route}">${decision.route}</span>
-    </div>
-    <p class="text">${escape(message.text)}</p>
+    <summary>
+      <div class="sum-top">
+        <span class="platform" data-p="${message.platform}">${message.platform}</span>
+        <span class="who">#${escape(message.channelName)} &middot; ${escape(shortPerson(message.personId))} &middot; ${escape(message.relationshipTier)}</span>
+        <span class="spacer"></span>
+        <span class="route" data-route="${decision.route}">${decision.route}</span>
+      </div>
+      <p class="msg">${escape(message.text)}</p>
+      <p class="sum-reason">${escape(decision.reason)}</p>
+      <span class="hint">Open for perception, cost, budget and route</span>
+    </summary>
     <div class="pipeline">
       <div class="stage">
         <h4>Perception</h4>
@@ -279,8 +476,8 @@ function card(message, decision) {
       </div>
       <div class="stage">
         <h4>Cost</h4>
-        <p class="maths" style="margin:0 0 6px">${maths(b)}</p>
-        <p class="cost-total" style="margin:0">${fmt(decision.cost)}</p>
+        <p class="maths">${maths(b)}</p>
+        <p class="cost-total">${fmt(decision.cost)}</p>
       </div>
       <div class="stage">
         <h4>Budget</h4>
@@ -294,32 +491,33 @@ function card(message, decision) {
       <div class="stage">
         <h4>Route</h4>
         <p style="margin:0 0 6px"><span class="route" data-route="${decision.route}">${decision.route}</span></p>
-        <p class="basis" style="margin:0">${escape(decision.basis)}</p>
+        <p class="basis">${escape(decision.basis)}</p>
       </div>
     </div>
-    <p class="reason">${escape(decision.reason)}</p>
   `;
   return el;
 }
 
 function errorCard(event) {
-  const el = document.createElement('article');
+  const el = document.createElement('details');
   el.className = 'card err';
   el.dataset.route = 'push';
   el.innerHTML = `
-    <div class="card-head">
-      <span class="platform">${escape(event.stage)} failed</span>
-      <span class="who">${escape(event.messageId)}</span>
-    </div>
-    <p class="reason" style="border-top:0">${escape(event.error)}</p>
+    <summary>
+      <div class="sum-top">
+        <span class="platform">${escape(event.stage)} failed</span>
+        <span class="who">${escape(event.messageId)}</span>
+      </div>
+      <p class="sum-reason">${escape(event.error)}</p>
+    </summary>
+    <div class="pipeline"><div class="stage"><h4>Error</h4><p class="basis">${escape(event.error)}</p></div></div>
   `;
   return el;
 }
 
 function prepend(node) {
   const stream = $('stream');
-  const empty = stream.querySelector('.empty');
-  if (empty) empty.remove();
+  stream.querySelector('.empty')?.remove();
   stream.prepend(node);
   while (stream.children.length > 60) stream.lastElementChild.remove();
 }
@@ -330,7 +528,10 @@ function escape(value) {
   );
 }
 
-async function refreshState() {
+/* ---- Wiring ------------------------------------------------------------- */
+
+async function refresh() {
+  entries = await (await fetch('/api/decisions')).json();
   renderState(await (await fetch('/api/state')).json());
 }
 
@@ -340,9 +541,14 @@ async function loadScenarios() {
   host.innerHTML = '';
   for (const s of scenarios) {
     const button = document.createElement('button');
-    button.innerHTML = `<b>${escape(s.id)}. ${escape(s.title)}</b><em>${escape(s.proves)}</em>`;
+    button.className = 'scenario-btn';
+    button.title = s.proves;
+    button.innerHTML = `<b>${escape(s.id)}. ${escape(s.title)}</b><em>${s.messageCount} ${s.messageCount === 1 ? 'message' : 'messages'}</em>`;
     button.addEventListener('click', async () => {
       button.disabled = true;
+      // Surface the claim next to the result, so the argument and the evidence
+      // are read together.
+      lastClaim = s.proves;
       try {
         const res = await fetch(`/api/scenario/${s.id}`, { method: 'POST' });
         if (!res.ok) {
@@ -359,39 +565,43 @@ async function loadScenarios() {
 
 $('focus-toggle').addEventListener('click', async () => {
   const active = $('focus-toggle').getAttribute('aria-pressed') !== 'true';
-  renderState(await (await fetch('/api/focus', {
+  await fetch('/api/focus', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ active }),
-  })).json());
+  });
+  await refresh();
 });
 
 $('reset-window').addEventListener('click', async () => {
-  const state = await (await fetch('/api/window/reset', { method: 'POST' })).json();
+  await fetch('/api/window/reset', { method: 'POST' });
   seen = new Set();
+  lastClaim = '';
   $('stream').innerHTML = '<p class="empty">Budget window rolled. Full ceiling restored.</p>';
-  renderState(state);
+  await refresh();
 });
 
 const stream = new EventSource('/api/stream');
 stream.addEventListener('message', (raw) => {
   const event = JSON.parse(raw.data);
   if (event.kind === 'decision') {
-    if (seen.has(event.decision.messageId)) return;
-    seen.add(event.decision.messageId);
-    prepend(card(event.message, event.decision));
+    if (!seen.has(event.decision.messageId)) {
+      seen.add(event.decision.messageId);
+      prepend(card(event.message, event.decision));
+    }
   } else if (event.kind === 'error') {
     prepend(errorCard(event));
   }
-  void refreshState();
+  void refresh();
 });
 
-// Backfill so a reload during the demo does not show an empty screen.
-for (const entry of (await (await fetch('/api/decisions')).json()).reverse()) {
+// Backfill so a reload mid demo does not show an empty screen.
+entries = await (await fetch('/api/decisions')).json();
+for (const entry of [...entries].reverse()) {
   seen.add(entry.decision.messageId);
   prepend(card(entry.message, entry.decision));
 }
-await refreshState();
+renderState(await (await fetch('/api/state')).json());
 await loadScenarios();
 </script>
 </body>

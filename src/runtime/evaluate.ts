@@ -35,6 +35,9 @@ export type Runtime = {
   /** Focus mode. A manual toggle: reading it from the calendar is a stretch
    * feature that demos identically, so it is not on the critical path. */
   focusActive: boolean;
+  /** When the current budget window started. Absent means align to the clock
+   * hour, which is the normal case. */
+  windowAnchor?: string;
   policy?: PolicyOptions;
 };
 
@@ -56,7 +59,7 @@ export function evaluateMessage(
   const clock = runtime.clock ?? systemClock;
 
   // Computed once. Everything else derives from it, including the window key.
-  const nextDigestAt = computeNextDigestAt(clock);
+  const nextDigestAt = computeNextDigestAt(clock, runtime.windowAnchor);
   const ceiling = ceilingFor(runtime.focusActive);
   const budgetRemaining = runtime.ledger.remainingInWindow(nextDigestAt, ceiling);
 
@@ -64,6 +67,7 @@ export function evaluateMessage(
     clock,
     focusActive: runtime.focusActive,
     budgetRemaining,
+    nextDigestAt,
   });
 
   const decision = decide(message, envelope, context, runtime.policy ?? {});

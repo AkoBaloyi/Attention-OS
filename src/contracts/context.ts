@@ -61,9 +61,37 @@ export function frozenClock(instant: string | Date): Clock {
 export const BUDGET_CEILING_NORMAL = 10;
 export const BUDGET_CEILING_FOCUS = 3.0;
 
-/** The digest releases on the hour. This is the ONLY place that is decided. */
-export function computeNextDigestAt(clock: Clock): string {
+/** How long a budget window lasts. */
+export const WINDOW_LENGTH_MS = 60 * 60 * 1000;
+
+/**
+ * When the next digest releases. This is the ONLY place that is decided.
+ *
+ * A window is always one hour long. By default it is aligned to the clock hour,
+ * which is what you want in normal use: the digest arrives at a predictable time.
+ *
+ * Passing an anchor starts a window from that instant instead. Rolling the window
+ * does exactly this, and it matters more than it looks. Without it, cost depends
+ * on which minute of the hour you happen to be in: a deadline twelve minutes out
+ * falls before a 15:00 release at 14:30 and after it at 14:55, so the same
+ * message costs 8.64 or 7.68 depending on the wall clock. Both answers are
+ * correct, which is the problem, because a demo that changes its numbers between
+ * takes cannot be checked against anything.
+ */
+export function computeNextDigestAt(clock: Clock, anchorIso?: string): string {
   const now = clock.now();
+
+  if (anchorIso) {
+    const anchor = Date.parse(anchorIso);
+    if (!Number.isNaN(anchor)) {
+      // Advance whole windows until we are ahead of now, so a long-lived anchor
+      // keeps producing sensible windows rather than one stuck in the past.
+      const elapsed = Math.max(0, now.getTime() - anchor);
+      const windows = Math.floor(elapsed / WINDOW_LENGTH_MS) + 1;
+      return new Date(anchor + windows * WINDOW_LENGTH_MS).toISOString();
+    }
+  }
+
   const next = new Date(now);
   next.setUTCMinutes(0, 0, 0);
   next.setUTCHours(next.getUTCHours() + 1);
@@ -83,11 +111,16 @@ export function buildEvaluationContext(params: {
   clock: Clock;
   focusActive: boolean;
   budgetRemaining: number;
+  /** Pass the already-computed release time so it is not derived twice. Omitted
+   * only in tests that do not care about the window. */
+  nextDigestAt?: string;
+  windowAnchor?: string;
 }): EvaluationContext {
   const ceiling = ceilingFor(params.focusActive);
   return {
     now: params.clock.now().toISOString(),
-    nextDigestAt: computeNextDigestAt(params.clock),
+    nextDigestAt:
+      params.nextDigestAt ?? computeNextDigestAt(params.clock, params.windowAnchor),
     focusActive: params.focusActive,
     budgetCeiling: ceiling,
     budgetRemaining: Math.max(0, Math.min(params.budgetRemaining, ceiling)),

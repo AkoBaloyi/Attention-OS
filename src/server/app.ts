@@ -25,10 +25,23 @@ export type FocusController = {
   set(active: boolean): void;
 };
 
+/**
+ * Owns when the current budget window started.
+ *
+ * Rolling anchors the window to now, which is what makes the demo reproducible.
+ * Left unanchored, a window aligns to the clock hour and cost depends on which
+ * minute you are in, so the same scenario yields different numbers between takes.
+ */
+export type WindowController = {
+  anchor(): string | undefined;
+  roll(): void;
+};
+
 export type ServerDeps = {
   ledger: Ledger;
   pipeline: Pipeline;
   focus: FocusController;
+  window?: WindowController;
   clock?: Clock;
   /** Runs a scenario against the real platforms. Absent when no adapter
    * credentials are configured, in which case the endpoint reports why. */
@@ -57,14 +70,16 @@ export function createApp(deps: ServerDeps) {
     }
   });
 
+  const windowKey = () => computeNextDigestAt(clock, deps.window?.anchor());
+
   function state() {
-    const windowKey = computeNextDigestAt(clock);
+    const windowKey_ = windowKey();
     const ceiling = ceilingFor(deps.focus.isActive());
     return {
       now: clock.now().toISOString(),
-      nextDigestAt: windowKey,
+      nextDigestAt: windowKey_,
       focusActive: deps.focus.isActive(),
-      ...deps.ledger.counters(windowKey, ceiling),
+      ...deps.ledger.counters(windowKey_, ceiling),
       adapters: deps.adapters(),
       // How scenarios reach the pipeline. 'inject' posts over the real platform
       // APIs; 'replay' bypasses the adapters and is development only. The
@@ -102,7 +117,7 @@ export function createApp(deps: ServerDeps) {
     }
 
     if (path === '/api/digest') {
-      json(res, 200, deps.ledger.digestFor(computeNextDigestAt(clock)));
+      json(res, 200, deps.ledger.digestFor(windowKey()));
       return;
     }
 
@@ -133,10 +148,15 @@ export function createApp(deps: ServerDeps) {
     }
 
     if (path === '/api/window/reset' && req.method === 'POST') {
-      // Rolls the current budget window so a second scenario starts on a full
-      // ceiling. Demo pacing only: it clears recorded decisions rather than
-      // exempting anything from the budget.
-      const cleared = deps.ledger.clearWindow(computeNextDigestAt(clock));
+      // Rolls the current budget window so the next scenario starts on a full
+      // ceiling. It clears recorded decisions rather than exempting anything
+      // from the budget.
+      //
+      // Anchoring to now is the part that matters for the demo: it puts a full
+      // hour between now and the next release, so a short deadline is always
+      // measured the same way regardless of what time you press the button.
+      const cleared = deps.ledger.clearWindow(windowKey());
+      deps.window?.roll();
       json(res, 200, { cleared, ...state() });
       return;
     }

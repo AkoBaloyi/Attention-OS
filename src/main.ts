@@ -43,12 +43,24 @@ const focus = {
   },
 };
 
+// Undefined means the window aligns to the clock hour, which is the normal case.
+// Rolling anchors it to now so the next window is a clean hour long.
+let windowAnchor: string | undefined;
+const attentionWindow = {
+  anchor: () => windowAnchor,
+  roll: () => {
+    windowAnchor = new Date().toISOString();
+    log(`budget window rolled, next release one hour from now`);
+  },
+};
+
 const alwaysAllow = new Set(config.alwaysAllowPersonIds);
 
 const pipeline = createPipeline({
   perceiver,
   ledger,
   getFocusActive: () => focusActive,
+  getWindowAnchor: () => windowAnchor,
   getPolicyOptions: () => ({
     alwaysAllowPersonIds: alwaysAllow,
     callEnabled: secrets.callEnabled,
@@ -172,6 +184,7 @@ const app = createApp({
   ledger,
   pipeline,
   focus,
+  window: attentionWindow,
   runScenario,
   replayScenario,
   adapters: () => ({ ...live, perception: perceptionMode }),

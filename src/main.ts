@@ -18,6 +18,7 @@ import { Ledger } from './store/ledger.ts';
 import { createPipeline } from './runtime/pipeline.ts';
 import { createApp } from './server/app.ts';
 import { createInjector } from './scenarios/injector.ts';
+import { createReplayer } from './scenarios/replay.ts';
 import type { Scenario } from './scenarios/reference.ts';
 
 const config = await loadConfig();
@@ -151,6 +152,20 @@ const runScenario = injector
     }
   : undefined;
 
+// --- Local replay ---------------------------------------------------------
+
+// Only wired when nothing real is connected. The moment a token is present this
+// path does not exist, so a demo cannot accidentally be recorded against it.
+const noAdaptersLive = !live.discord && !live.slack;
+const replayer = noAdaptersLive ? createReplayer({ pipeline }) : undefined;
+
+const replayScenario = replayer
+  ? async (scenario: Scenario) => {
+      log(`REPLAY (adapters bypassed, development only) scenario ${scenario.id}: ${scenario.title}`);
+      await replayer.replay(scenario);
+    }
+  : undefined;
+
 // --- Server ---------------------------------------------------------------
 
 const app = createApp({
@@ -158,6 +173,7 @@ const app = createApp({
   pipeline,
   focus,
   runScenario,
+  replayScenario,
   adapters: () => ({ ...live, perception: perceptionMode }),
 });
 
@@ -167,7 +183,15 @@ log('');
 log(`  Attention OS  ->  http://localhost:${secrets.port}`);
 log(`  perception: ${perceptionMode}${perceptionMode === 'stub' ? '  (no OPENAI_API_KEY, replaying scripted reference envelopes)' : ''}`);
 log(`  sources: ${live.discord ? 'discord' : '-'} ${live.slack ? 'slack' : '-'}`);
-log(`  injector: ${injector ? 'ready' : 'unavailable, no webhooks or slack token configured'}`);
+log(
+  `  scenarios: ${
+    injector
+      ? 'inject via the real Discord and Slack APIs'
+      : replayer
+        ? 'LOCAL REPLAY ONLY (adapters bypassed, development use, do not record this)'
+        : 'unavailable'
+  }`,
+);
 log(`  ledger: ${secrets.ledgerPath}`);
 log('');
 

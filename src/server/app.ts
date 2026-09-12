@@ -33,6 +33,14 @@ export type ServerDeps = {
   /** Runs a scenario against the real platforms. Absent when no adapter
    * credentials are configured, in which case the endpoint reports why. */
   runScenario?: (scenario: Scenario) => Promise<void>;
+  /**
+   * Local replay, which bypasses the adapters entirely.
+   *
+   * main.ts only supplies this when no adapter is connected, so it cannot exist
+   * alongside a real source. That is what stops it becoming the thing a demo
+   * gets recorded against.
+   */
+  replayScenario?: (scenario: Scenario) => Promise<void>;
   /** Which adapters actually connected. Shown on the dashboard so the demo can
    * never imply a platform is live when it is not. */
   adapters: () => { discord: boolean; slack: boolean; perception: 'live' | 'stub' };
@@ -58,6 +66,10 @@ export function createApp(deps: ServerDeps) {
       focusActive: deps.focus.isActive(),
       ...deps.ledger.counters(windowKey, ceiling),
       adapters: deps.adapters(),
+      // How scenarios reach the pipeline. 'inject' posts over the real platform
+      // APIs; 'replay' bypasses the adapters and is development only. The
+      // dashboard labels the buttons differently for each.
+      scenarioMode: deps.runScenario ? 'inject' : deps.replayScenario ? 'replay' : 'none',
     };
   }
 
@@ -120,6 +132,15 @@ export function createApp(deps: ServerDeps) {
       return;
     }
 
+    if (path === '/api/window/reset' && req.method === 'POST') {
+      // Rolls the current budget window so a second scenario starts on a full
+      // ceiling. Demo pacing only: it clears recorded decisions rather than
+      // exempting anything from the budget.
+      const cleared = deps.ledger.clearWindow(computeNextDigestAt(clock));
+      json(res, 200, { cleared, ...state() });
+      return;
+    }
+
     if (path === '/api/focus' && req.method === 'POST') {
       const body = await readJson(req);
       const active = Boolean((body as { active?: unknown }).active);
@@ -136,10 +157,11 @@ export function createApp(deps: ServerDeps) {
         json(res, 404, { error: `unknown scenario: ${scenarioMatch[1]}` });
         return;
       }
-      if (!deps.runScenario) {
-        // Say exactly why rather than failing vaguely. The injector posts through
-        // the real platform APIs on purpose, so without credentials there is
-        // nothing honest for it to do.
+      // Prefer the real path whenever it exists. Replay is only reachable when
+      // there is no adapter to inject into.
+      const run = deps.runScenario ?? deps.replayScenario;
+      if (!run) {
+        // Say exactly why rather than failing vaguely.
         json(res, 409, {
           error:
             'no platform credentials configured, so there is nothing to inject into. The injector posts through the real Discord and Slack APIs by design.',
@@ -149,8 +171,12 @@ export function createApp(deps: ServerDeps) {
 
       // Fire and forget: the scenario spaces its messages out over seconds, and
       // the client is watching the event stream anyway.
-      void deps.runScenario(scenario);
-      json(res, 202, { started: scenario.id, messages: scenario.messages.length });
+      void run(scenario);
+      json(res, 202, {
+        started: scenario.id,
+        messages: scenario.messages.length,
+        mode: deps.runScenario ? 'inject' : 'replay',
+      });
       return;
     }
 

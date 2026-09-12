@@ -107,6 +107,10 @@
   .reason { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; background: var(--panel-2); }
   .basis { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
   .empty { color: var(--muted); padding: 28px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+  .mode-note { font-size: 12px; margin: -4px 0 12px; padding: 8px 10px; border-radius: 6px; }
+  .mode-note[data-mode="inject"] { color: var(--ok); background: #12291f; }
+  .mode-note[data-mode="replay"] { color: var(--digest); background: #2e2411; }
+  .mode-note[data-mode="none"] { color: var(--muted); background: var(--panel-2); }
   .err { border-left-color: var(--push); }
   .visually-hidden {
     position: absolute; width: 1px; height: 1px; margin: -1px;
@@ -149,15 +153,22 @@
     </section>
 
     <section class="panel" aria-labelledby="focus-label">
-      <p class="label" id="focus-label">Focus mode</p>
-      <button id="focus-toggle" aria-pressed="false">
-        <b>Enter focus mode</b>
-        <em>Drops the ceiling from 10 to 3.0</em>
-      </button>
+      <p class="label" id="focus-label">Controls</p>
+      <div class="stack">
+        <button id="focus-toggle" aria-pressed="false">
+          <b>Enter focus mode</b>
+          <em>Drops the ceiling from 10 to 3.0</em>
+        </button>
+        <button id="reset-window">
+          <b>Roll the budget window</b>
+          <em>Restores the full ceiling. Demo pacing, not a way past the budget.</em>
+        </button>
+      </div>
     </section>
 
     <section class="panel" aria-labelledby="scenario-label">
       <p class="label" id="scenario-label">Reference scenarios</p>
+      <p class="mode-note" id="scenario-mode" role="status"></p>
       <div class="stack" id="scenarios"></div>
     </section>
   </div>
@@ -211,6 +222,17 @@ function renderState(s) {
     el.textContent = name;
     $('adapters').append(el);
   }
+
+  // Never let the screen imply messages arrived over a real platform when they
+  // were replayed locally.
+  const note = $('scenario-mode');
+  note.dataset.mode = s.scenarioMode;
+  note.textContent =
+    s.scenarioMode === 'inject'
+      ? 'Posted over the real Discord and Slack APIs, then read back in through the adapters.'
+      : s.scenarioMode === 'replay'
+        ? 'LOCAL REPLAY. No platform is connected, so these bypass the adapters. Development only, not a demo.'
+        : 'No scenario source configured.';
 }
 
 /** The arithmetic, spelled out. This is what makes the determinism checkable
@@ -342,6 +364,13 @@ $('focus-toggle').addEventListener('click', async () => {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ active }),
   })).json());
+});
+
+$('reset-window').addEventListener('click', async () => {
+  const state = await (await fetch('/api/window/reset', { method: 'POST' })).json();
+  seen = new Set();
+  $('stream').innerHTML = '<p class="empty">Budget window rolled. Full ceiling restored.</p>';
+  renderState(state);
 });
 
 const stream = new EventSource('/api/stream');

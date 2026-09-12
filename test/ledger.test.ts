@@ -190,6 +190,41 @@ describe('the budget is derived from rows, not from memory', () => {
   });
 });
 
+describe('rolling the budget window', () => {
+  test('clearing restores the full ceiling', () => {
+    const l = ledger();
+    evaluateMessage({ ledger: l, clock, focusActive: true }, ROLLBACK, ROLLBACK_ENV);
+    assert.equal(l.remainingInWindow(WINDOW, BUDGET_CEILING_FOCUS), 0);
+
+    const cleared = l.clearWindow(WINDOW);
+    assert.equal(cleared, 1);
+    assert.equal(l.remainingInWindow(WINDOW, BUDGET_CEILING_FOCUS), 3.0);
+    assert.equal(l.recent().length, 0);
+  });
+
+  test('a cleared message can be re-ingested rather than being swallowed as a duplicate', () => {
+    // The idempotency guard is keyed on message id, so clearing decisions has to
+    // clear the orphaned messages too or a re-run would silently do nothing.
+    const l = ledger();
+    const runtime = { ledger: l, clock, focusActive: true };
+
+    evaluateMessage(runtime, ROLLBACK, ROLLBACK_ENV);
+    l.clearWindow(WINDOW);
+    const second = evaluateMessage(runtime, ROLLBACK, ROLLBACK_ENV);
+
+    assert.equal(second.budgetBefore, 3.0, 'and it sees a full budget again');
+    assert.equal(l.recent().length, 1);
+  });
+
+  test('clearing one window leaves other windows alone', () => {
+    const l = ledger();
+    evaluateMessage({ ledger: l, clock, focusActive: true }, ROLLBACK, ROLLBACK_ENV);
+
+    assert.equal(l.clearWindow('2026-09-12T23:00:00.000Z'), 0);
+    assert.equal(l.spentInWindow(WINDOW), 3.0, 'the real window is untouched');
+  });
+});
+
 describe('Scenario A end to end, budget derived from the ledger', () => {
   test('the rollback interrupts and the dinner question is displaced', () => {
     const l = ledger();

@@ -265,6 +265,26 @@ describe('the HTTP surface the dashboard depends on', () => {
     assert.equal(res.status, 404);
   });
 
+  test('reports scenarioMode so the dashboard can label the source honestly', async () => {
+    // Neither injector nor replay wired here, so there is nothing to claim.
+    const state = await getJson<{ scenarioMode: string }>('/api/state');
+    assert.equal(state.scenarioMode, 'none');
+  });
+
+  test('rolling the window restores the ceiling and empties the stream', async () => {
+    const before = await getJson<{ spent: number }>('/api/state');
+    assert.equal(before.spent, 3.0);
+
+    const rolled = (await (
+      await fetch(`${base}/api/window/reset`, { method: 'POST' })
+    ).json()) as { cleared: number; spent: number; remaining: number };
+
+    assert.equal(rolled.cleared, 2);
+    assert.equal(rolled.spent, 0);
+    assert.equal(rolled.remaining, 3.0);
+    assert.equal((await getJson<unknown[]>('/api/decisions')).length, 0);
+  });
+
   test('streams decisions over SSE', async () => {
     const controller = new AbortController();
     const res = await fetch(`${base}/api/stream`, { signal: controller.signal });

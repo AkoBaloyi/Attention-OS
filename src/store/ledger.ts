@@ -240,6 +240,29 @@ export class Ledger {
     return rows.map(hydrate);
   }
 
+  /**
+   * Clears one budget window, restoring the full ceiling.
+   *
+   * This exists for demo pacing, not as a way to escape the budget. A window is
+   * an hour long and a demo video is two minutes, so running two scenarios back
+   * to back would otherwise show the second one against an already-spent budget:
+   * still correct, but it tells a much weaker story than `3.0 -> 0`.
+   *
+   * Returns how many decisions were discarded.
+   */
+  clearWindow(windowKey: string): number {
+    const result = this.#db
+      .prepare('DELETE FROM decisions WHERE window_key = ?')
+      .run(windowKey);
+
+    // Orphaned messages would otherwise block re-ingesting the same ids.
+    this.#db.exec(
+      'DELETE FROM messages WHERE id NOT IN (SELECT message_id FROM decisions)',
+    );
+
+    return Number(result.changes);
+  }
+
   close(): void {
     this.#db.close();
   }

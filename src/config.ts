@@ -33,6 +33,10 @@ export type AppConfig = {
 export type Secrets = {
   openAiApiKey?: string;
   openAiModel?: string;
+  /** Second link in the perception fallback chain, so one dead provider does not
+   * stop the agent. */
+  openRouterApiKey?: string;
+  openRouterModel?: string;
   discordBotToken?: string;
   slackBotToken?: string;
   slackAppToken?: string;
@@ -76,6 +80,8 @@ export function loadSecrets(env = process.env): Secrets {
     discordBotToken: nonEmpty(env.DISCORD_BOT_TOKEN),
     slackBotToken: nonEmpty(env.SLACK_BOT_TOKEN),
     slackAppToken: nonEmpty(env.SLACK_APP_TOKEN),
+    openRouterApiKey: nonEmpty(env.OPENROUTER_API_KEY),
+    openRouterModel: nonEmpty(env.OPENROUTER_MODEL),
     elevenLabsApiKey: nonEmpty(env.ELEVENLABS_API_KEY),
     elevenLabsVoiceId: nonEmpty(env.ELEVENLABS_VOICE_ID),
     ledgerPath: nonEmpty(env.LEDGER_PATH) ?? './data/ledger.sqlite',

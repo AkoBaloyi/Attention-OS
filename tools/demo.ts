@@ -55,6 +55,24 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const pad = (s: string | number, n: number) => String(s).padEnd(n);
 
+/**
+ * Waits until the expected number of decisions has landed.
+ *
+ * A fixed sleep was wrong and it bit: once perception involved a real network
+ * round trip, a scenario's second message arrived after the wait had elapsed and
+ * the window had already been rolled for the next scenario, so messages appeared
+ * under the wrong heading. Polling for the count is deterministic no matter how
+ * slow the provider is.
+ */
+async function waitForDecisions(expected: number, timeoutMs = 30_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if ((await get<StateResponse>('/api/state')).received >= expected) return true;
+    await sleep(200);
+  }
+  return false;
+}
+
 function printEntry(entry: Entry): void {
   const { message: m, decision: d } = entry;
   console.log(
@@ -76,7 +94,12 @@ console.log(`  scenario mode: ${state.scenarioMode}${state.scenarioMode === 'rep
 await post('/api/focus', { active: true });
 console.log('  focus mode ON, ceiling 3.0');
 
-const scenarios = await get<Array<{ id: string; title: string; proves: string }>>('/api/scenarios');
+const scenarios = await get<Array<{
+  id: string;
+  title: string;
+  proves: string;
+  messageCount: number;
+}>>('/api/scenarios');
 
 for (const scenario of scenarios) {
   // Roll the window so each scenario starts on a full ceiling. Without this the
@@ -84,7 +107,8 @@ for (const scenario of scenarios) {
   // hides the displacement that makes the point.
   await post('/api/window/reset');
   await post(`/api/scenario/${scenario.id}`);
-  await sleep(5000);
+
+  const settled = await waitForDecisions(scenario.messageCount);
 
   const after = await get<StateResponse>('/api/state');
   const entries = (await get<Entry[]>('/api/decisions')).reverse();
@@ -98,6 +122,13 @@ for (const scenario of scenarios) {
     `      received ${after.received}  held ${after.held}  deferred ${after.digested}  ` +
       `interrupts ${after.interrupted}  spent ${after.spent}/${after.ceiling}`,
   );
+
+  if (!settled) {
+    console.log(
+      `      WARNING expected ${scenario.messageCount} messages, saw ${after.received}. ` +
+        'Something did not arrive.',
+    );
+  }
 }
 
 console.log('');

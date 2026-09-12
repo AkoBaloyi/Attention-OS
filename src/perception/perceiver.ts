@@ -116,6 +116,62 @@ function normalise(envelope: PerceptionEnvelope): PerceptionEnvelope {
 }
 
 /**
+ * Tries each transport in order until one answers.
+ *
+ * Perception sits on the hot path for every message, so a single dead provider
+ * should not take the whole agent down. This became a real requirement rather
+ * than a nice idea the first time a key ran out of credit: every message in the
+ * window failed, and the answer to that is a second provider, not a retry against
+ * the same exhausted one.
+ *
+ * Order matters. Put the provider you want first, and a scripted or local
+ * transport last if you want the system to keep functioning at reduced fidelity.
+ */
+export function fallbackTransport(
+  ...transports: ReadonlyArray<{ name: string; transport: PerceptionTransport }>
+): PerceptionTransport & { lastUsed: () => string | undefined } {
+  let lastUsed: string | undefined;
+
+  return {
+    lastUsed: () => lastUsed,
+    async complete(params) {
+      const failures: string[] = [];
+
+      for (const { name, transport } of transports) {
+        try {
+          const result = await transport.complete(params);
+          lastUsed = name;
+          return result;
+        } catch (error) {
+          failures.push(`${name}: ${String(error).slice(0, 160)}`);
+        }
+      }
+
+      throw new Error(`all perception providers failed. ${failures.join(' | ')}`);
+    },
+  };
+}
+
+/**
+ * OpenRouter, which speaks the same Chat Completions shape as OpenAI.
+ *
+ * Exists as the second link in the fallback chain, so one provider running out of
+ * credit degrades fidelity instead of stopping the agent.
+ */
+export function openRouterTransport(config: {
+  apiKey: string;
+  model?: string;
+  timeoutMs?: number;
+}): PerceptionTransport {
+  return openAiTransport({
+    apiKey: config.apiKey,
+    model: config.model ?? 'openai/gpt-4o-mini',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    timeoutMs: config.timeoutMs,
+  });
+}
+
+/**
  * Production transport: OpenAI Chat Completions with strict structured output.
  *
  * Uses native fetch rather than the SDK to keep the dependency surface at zero

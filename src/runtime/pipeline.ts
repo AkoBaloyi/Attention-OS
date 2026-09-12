@@ -17,7 +17,22 @@ import type { Clock } from '../contracts/context.ts';
 import type { Perceiver } from '../perception/perceiver.ts';
 import type { Ledger } from '../store/ledger.ts';
 import type { PolicyOptions } from '../policy/engine.ts';
-import { evaluateMessage } from './evaluate.ts';
+import { evaluateMessage, evaluateUnreadable } from './evaluate.ts';
+
+/** Keeps a provider's error body out of a reason a human has to read, while
+ * still saying enough to act on. */
+function shortFailure(error: unknown): string {
+  const text = String(error);
+  if (/insufficient_quota|credit_balance_exhausted/i.test(text)) {
+    return 'The perception provider reported no remaining credit.';
+  }
+  if (/\b429\b|rate.?limit/i.test(text)) return 'The perception provider was rate limiting.';
+  if (/timeout|abort/i.test(text)) return 'The perception provider timed out.';
+  if (/\b(401|403)\b|invalid.?api.?key/i.test(text)) {
+    return 'The perception provider rejected the credentials.';
+  }
+  return 'The perception provider was unavailable.';
+}
 
 export type PipelineEvent =
   | { kind: 'decision'; message: CanonicalMessage; decision: Decision }
@@ -60,7 +75,8 @@ export function createPipeline(deps: {
         envelope = await deps.perceiver.perceive(message);
       } catch (error) {
         // Perception failing is not a reason to interrupt, and it is not a
-        // reason to silently drop a message either. Surface it and move on.
+        // reason to lose the message either. Defer it to the digest so it
+        // surfaces at the next break, and record it so it shows in the counters.
         deps.onError?.(error);
         emit({
           kind: 'error',
@@ -68,7 +84,26 @@ export function createPipeline(deps: {
           stage: 'perception',
           error: String(error),
         });
-        return null;
+
+        try {
+          const deferred = evaluateUnreadable(
+            {
+              ledger: deps.ledger,
+              clock: deps.clock,
+              focusActive: deps.getFocusActive(),
+              windowAnchor: deps.getWindowAnchor?.(),
+            },
+            message,
+            shortFailure(error),
+          );
+          emit({ kind: 'decision', message, decision: deferred });
+          return deferred;
+        } catch (recordError) {
+          // If even recording fails there is nothing useful left to do, but the
+          // original perception failure is the one worth reporting.
+          deps.onError?.(recordError);
+          return null;
+        }
       }
 
       try {

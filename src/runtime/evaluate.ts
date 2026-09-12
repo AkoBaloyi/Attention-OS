@@ -26,7 +26,7 @@ import {
   systemClock,
 } from '../contracts/context.ts';
 import { assertValidEnvelope } from '../contracts/envelope.ts';
-import { decide, type PolicyOptions } from '../policy/engine.ts';
+import { decide, deferUnreadable, type PolicyOptions } from '../policy/engine.ts';
 import type { Ledger } from '../store/ledger.ts';
 
 export type Runtime = {
@@ -40,6 +40,43 @@ export type Runtime = {
   windowAnchor?: string;
   policy?: PolicyOptions;
 };
+
+/** Builds the context for this evaluation. Shared so the unreadable path is
+ * recorded against exactly the same window and budget as a normal decision. */
+function contextFor(runtime: Runtime) {
+  const clock = runtime.clock ?? systemClock;
+  const nextDigestAt = computeNextDigestAt(clock, runtime.windowAnchor);
+  const ceiling = ceilingFor(runtime.focusActive);
+
+  return {
+    clock,
+    context: buildEvaluationContext({
+      clock,
+      focusActive: runtime.focusActive,
+      budgetRemaining: runtime.ledger.remainingInWindow(nextDigestAt, ceiling),
+      nextDigestAt,
+    }),
+  };
+}
+
+/**
+ * Records a message perception could not read.
+ *
+ * Goes through the same funnel and the same ledger as everything else, so it
+ * appears in the counters, shows up in the digest, and is auditable. The
+ * alternative was dropping it, which would let an API outage quietly swallow
+ * messages.
+ */
+export function evaluateUnreadable(
+  runtime: Runtime,
+  message: CanonicalMessage,
+  failure: string,
+): Decision {
+  const { clock, context } = contextFor(runtime);
+  const decision = deferUnreadable(message, context, failure);
+  runtime.ledger.record(message, decision, clock.now().toISOString());
+  return decision;
+}
 
 export function evaluateMessage(
   runtime: Runtime,

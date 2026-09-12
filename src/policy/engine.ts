@@ -78,6 +78,55 @@ function chooseRoute(
   };
 }
 
+/**
+ * Fail-safe for a message perception could not read.
+ *
+ * Deliberately not part of the cost model, and it deliberately does not invent an
+ * envelope to feed through it. No cost could be computed, so none is claimed: the
+ * message is deferred to the next digest, costs no attention, and carries a
+ * reason saying exactly what happened.
+ *
+ * Deferring rather than dropping is the whole point. Dropping would mean a
+ * transient API failure silently swallowed something you needed to see, which for
+ * an agent whose job is guarding your attention is the worst way to fail. Nor
+ * should it interrupt: a flaky provider would then become a source of noise.
+ */
+export function deferUnreadable(
+  message: CanonicalMessage,
+  context: EvaluationContext,
+  failure: string,
+): Decision {
+  return {
+    messageId: message.id,
+    route: 'digest',
+    basis: 'perception_unavailable',
+    cost: 0,
+    breakdown: {
+      base: 0,
+      deadlineMultiplier: 1,
+      imminentFloorApplied: false,
+      actionRequiredMultiplier: 1,
+      tierMultiplier: 1,
+      confidence: 0,
+      total: 0,
+    },
+    budgetBefore: context.budgetRemaining,
+    budgetAfter: context.budgetRemaining,
+    reason: `Could not read this message, so it is waiting for the digest rather than being dropped. ${failure}`,
+    context,
+    envelope: {
+      messageId: message.id,
+      speechAct: 'question',
+      actionRequired: false,
+      deadline: null,
+      consequenceOfDelay: 'none',
+      topic: 'unread message',
+      confidence: 0,
+      reason: 'Perception unavailable.',
+    },
+  };
+}
+
 export function decide(
   message: CanonicalMessage,
   envelope: PerceptionEnvelope,

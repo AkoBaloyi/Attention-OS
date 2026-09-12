@@ -37,7 +37,14 @@ export type RouteBasis =
   /** Non-discretionary and loud enough for the top rung. */
   | 'non_discretionary_call'
   /** An explicit always-allow rule for this person forced it through. */
-  | 'always_allow_rule';
+  | 'always_allow_rule'
+  /**
+   * Perception could not read the message, so it was deferred rather than
+   * dropped. Not a cost decision: no cost could be computed. A message we
+   * failed to understand is not a message that does not matter, and dropping it
+   * would mean an API outage silently swallowed things you needed to see.
+   */
+  | 'perception_unavailable';
 
 /** The intermediate arithmetic, kept so the cost is inspectable rather than
  * an opaque number. Every field corresponds to one line of the cost model. */

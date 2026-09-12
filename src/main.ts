@@ -12,7 +12,13 @@ import { loadConfig, loadSecrets } from './config.ts';
 import { IdentityDirectory } from './adapters/identity.ts';
 import { startDiscordAdapter } from './adapters/discord.ts';
 import { startSlackAdapter } from './adapters/slack.ts';
-import { createPerceiver, openAiTransport } from './perception/perceiver.ts';
+import {
+  createPerceiver,
+  fallbackTransport,
+  openAiTransport,
+  openRouterTransport,
+  type PerceptionTransport,
+} from './perception/perceiver.ts';
 import { scriptedTransport } from './perception/scripted.ts';
 import { Ledger } from './store/ledger.ts';
 import { createPipeline } from './runtime/pipeline.ts';
@@ -28,12 +34,31 @@ const secrets = loadSecrets();
 const identity = new IdentityDirectory(config.people);
 const ledger = new Ledger(secrets.ledgerPath);
 
-const perceptionMode = secrets.openAiApiKey ? 'live' : 'stub';
-const perceiver = createPerceiver({
-  transport: secrets.openAiApiKey
-    ? openAiTransport({ apiKey: secrets.openAiApiKey, model: secrets.openAiModel })
-    : scriptedTransport(),
-});
+// Providers in preference order, with the scripted stand-in last so a dead key
+// degrades fidelity rather than stopping the agent. A single provider running out
+// of credit should not take perception down for the whole window.
+const providers: Array<{ name: string; transport: PerceptionTransport }> = [];
+
+if (secrets.openAiApiKey) {
+  providers.push({
+    name: 'openai',
+    transport: openAiTransport({ apiKey: secrets.openAiApiKey, model: secrets.openAiModel }),
+  });
+}
+if (secrets.openRouterApiKey) {
+  providers.push({
+    name: 'openrouter',
+    transport: openRouterTransport({
+      apiKey: secrets.openRouterApiKey,
+      model: secrets.openRouterModel,
+    }),
+  });
+}
+providers.push({ name: 'scripted', transport: scriptedTransport() });
+
+const perceptionMode = providers.length > 1 ? 'live' : 'stub';
+const chain = fallbackTransport(...providers);
+const perceiver = createPerceiver({ transport: chain });
 
 let focusActive = false;
 const focus = {
@@ -209,7 +234,10 @@ await app.listen(secrets.port);
 
 log('');
 log(`  Attention OS  ->  http://localhost:${secrets.port}`);
-log(`  perception: ${perceptionMode}${perceptionMode === 'stub' ? '  (no OPENAI_API_KEY, replaying scripted reference envelopes)' : ''}`);
+log(
+  `  perception: ${providers.map((p) => p.name).join(' -> ')}` +
+    `${perceptionMode === 'stub' ? '  (no live provider, replaying scripted reference envelopes)' : ''}`,
+);
 log(`  sources: ${live.discord ? 'discord' : '-'} ${live.slack ? 'slack' : '-'}`);
 log(
   `  scenarios: ${

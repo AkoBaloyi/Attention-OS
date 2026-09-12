@@ -79,10 +79,30 @@ export function createReplayer(deps: {
   const sleep = deps.sleepImpl ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
 
   return {
+    /**
+     * Posts a scenario on its scripted timing.
+     *
+     * `delayMs` controls when a message ARRIVES, not when perception finishes with
+     * it, so ingestion is not awaited inside the timing loop. Awaiting it made
+     * perception latency push the schedule out: with a slow provider, a message
+     * scheduled 2.5 seconds in landed after five, drifting into the next
+     * scenario's budget window.
+     *
+     * This also matches how the real adapters behave. Discord and Slack hand
+     * messages over on their own schedule and main.ts ingests them without
+     * awaiting, so replaying any other way would be testing a path that does not
+     * exist in production.
+     *
+     * Concurrent ingestion is safe. Everything after perception, meaning reading
+     * the remaining budget, deciding, and recording, is synchronous, so on Node's
+     * single thread it cannot interleave and two messages cannot both spend the
+     * same budget. Which of them gets the budget is decided by which is
+     * understood first, and the scripted delays are far larger than the spread in
+     * perception latency.
+     */
     async replay(scenario: Scenario): Promise<void> {
-      // Real timing is preserved, because the ordering of two messages arriving
-      // seconds apart is the behaviour being demonstrated.
       const runId = Date.now().toString(36);
+      const inFlight: Array<Promise<unknown>> = [];
       let elapsed = 0;
 
       for (const [index, message] of scenario.messages.entries()) {
@@ -92,10 +112,16 @@ export function createReplayer(deps: {
           elapsed = message.delayMs;
         }
 
-        await deps.pipeline.ingest(
-          toCanonicalMessage(message, { identity, runId, index, clock: deps.clock }),
+        inFlight.push(
+          deps.pipeline.ingest(
+            toCanonicalMessage(message, { identity, runId, index, clock: deps.clock }),
+          ),
         );
       }
+
+      // Resolve only once every message has been through the pipeline, so a
+      // caller that awaits replay() knows the window is settled.
+      await Promise.allSettled(inFlight);
     },
   };
 }

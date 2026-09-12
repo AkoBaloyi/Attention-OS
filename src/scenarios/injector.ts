@@ -129,7 +129,7 @@ export function createInjector(config: InjectorConfig) {
      */
     async run(scenario: Scenario): Promise<InjectionResult> {
       const failures: InjectionResult['failures'] = [];
-      let posted = 0;
+      const posts: Array<Promise<void>> = [];
       let elapsed = 0;
 
       for (const message of scenario.messages) {
@@ -139,16 +139,26 @@ export function createInjector(config: InjectorConfig) {
           elapsed = message.delayMs;
         }
 
-        try {
-          if (message.platform === 'discord') await postDiscord(message);
-          else await postSlack(message);
-          posted++;
-        } catch (error) {
-          failures.push({ text: message.text, error: String(error) });
-        }
+        // Not awaited inside the loop. `delayMs` is when a message should be
+        // sent, and an HTTP round trip to Discord or Slack would otherwise push
+        // every later message out by the latency of every earlier one, so a pair
+        // scheduled 2.5 seconds apart could land four seconds apart instead.
+        posts.push(
+          (message.platform === 'discord' ? postDiscord(message) : postSlack(message)).catch(
+            (error: unknown) => {
+              failures.push({ text: message.text, error: String(error) });
+            },
+          ),
+        );
       }
 
-      return { scenarioId: scenario.id, posted, failures };
+      await Promise.allSettled(posts);
+
+      return {
+        scenarioId: scenario.id,
+        posted: scenario.messages.length - failures.length,
+        failures,
+      };
     },
   };
 }

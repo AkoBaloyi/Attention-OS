@@ -1,0 +1,25 @@
+node_modules/
+dist/
+build/
+
+# Secrets. Never commit these.
+.env
+.env.local
+*.pem
+
+# Local ledger
+*.sqlite
+*.sqlite-journal
+*.db
+data/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*

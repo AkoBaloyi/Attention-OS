@@ -1,0 +1,19 @@
+{
+  "name": "attention-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "An agent in Discord and Slack that treats attention as a budget. The model perceives, the runtime decides.",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "test:watch": "node --test --watch \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.0",
+    "typescript": "5.9.2"
+  }
+}
